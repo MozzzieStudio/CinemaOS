@@ -125,25 +125,22 @@ function App() {
     switch (viewMode) {
       case "writer":
         return (
-          <>
-            <ScriptEditor 
-              // Pass down state
-              isNavigatorOpen={isNavigatorOpen} setIsNavigatorOpen={setIsNavigatorOpen}
-              isBeatBoardOpen={isBeatBoardOpen} setIsBeatBoardOpen={setIsBeatBoardOpen}
-              isIndexCardsOpen={isIndexCardsOpen} setIsIndexCardsOpen={setIsIndexCardsOpen}
-              isAnalysisOpen={isAnalysisOpen} setIsAnalysisOpen={setIsAnalysisOpen}
-              isExportOpen={isExportOpen} setIsExportOpen={setIsExportOpen}
-              // FD13 Features
-              isTypewriterEnabled={isTypewriterEnabled}
-              isFocusModeActive={isFocusModeActive}
-              setIsFocusModeActive={setIsFocusModeActive}
-              sceneNumbersConfig={sceneNumbersConfig.config}
-              moresContinuedsConfig={moresContinuedsConfig.config}
-            />
-            {/* Right Side Panels - Overlay */}
-            <RevisionPanel isOpen={isRevisionPanelOpen} onClose={() => setIsRevisionPanelOpen(false)} />
-            <WritingStatsPanel isOpen={isWritingStatsOpen} onClose={() => setIsWritingStatsOpen(false)} />
-          </>
+          <ScriptEditor 
+            // Pass down state
+            isNavigatorOpen={isNavigatorOpen} setIsNavigatorOpen={setIsNavigatorOpen}
+            isBeatBoardOpen={isBeatBoardOpen} setIsBeatBoardOpen={setIsBeatBoardOpen}
+            isIndexCardsOpen={isIndexCardsOpen} setIsIndexCardsOpen={setIsIndexCardsOpen}
+            isAnalysisOpen={isAnalysisOpen} setIsAnalysisOpen={setIsAnalysisOpen}
+            isExportOpen={isExportOpen} setIsExportOpen={setIsExportOpen}
+            // FD13 Features
+            isTypewriterEnabled={isTypewriterEnabled}
+            isFocusModeActive={isFocusModeActive}
+            setIsFocusModeActive={setIsFocusModeActive}
+            sceneNumbersConfig={sceneNumbersConfig.config}
+            moresContinuedsConfig={moresContinuedsConfig.config}
+            // AI Sidebar
+            onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+          />
         );
       case "preproduction":
         return <PreProductionLayout projectId={projectId} />;
@@ -281,39 +278,18 @@ function App() {
         </header>
 
         {/* CONTENT */}
-        {/* CONTENT */}
         <main className="flex opacity-100 flex-1 min-h-0 relative" onClick={() => setActiveMenu(null)}>
           <div className="flex-1 flex flex-col min-h-0 min-w-0">
-             {/* Pass toggleSidebar to ScriptEditor if in writer mode */}
-             {viewMode === "writer" ? (
-                <ScriptEditor 
-                  // Pass down state
-                  isNavigatorOpen={isNavigatorOpen} setIsNavigatorOpen={setIsNavigatorOpen}
-                  isBeatBoardOpen={isBeatBoardOpen} setIsBeatBoardOpen={setIsBeatBoardOpen}
-                  isIndexCardsOpen={isIndexCardsOpen} setIsIndexCardsOpen={setIsIndexCardsOpen}
-                  isAnalysisOpen={isAnalysisOpen} setIsAnalysisOpen={setIsAnalysisOpen}
-                  isExportOpen={isExportOpen} setIsExportOpen={setIsExportOpen}
-                  // FD13 Features
-                  isTypewriterEnabled={isTypewriterEnabled}
-                  isFocusModeActive={isFocusModeActive}
-                  setIsFocusModeActive={setIsFocusModeActive}
-                  sceneNumbersConfig={sceneNumbersConfig.config}
-                  moresContinuedsConfig={moresContinuedsConfig.config}
-                  // AI Sidebar
-                  onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} 
-                />
-             ) : (
-                renderContent()
-             )}
+            {renderContent()}
           </div>
 
-           {/* Right Side Panels - Overlay for Panels */}
-           {viewMode === "writer" && (
-             <>
-               <RevisionPanel isOpen={isRevisionPanelOpen} onClose={() => setIsRevisionPanelOpen(false)} />
-               <WritingStatsPanel isOpen={isWritingStatsOpen} onClose={() => setIsWritingStatsOpen(false)} />
-             </>
-           )}
+          {/* Right Side Panels - Overlay for Writer Mode */}
+          {viewMode === "writer" && (
+            <>
+              <RevisionPanel isOpen={isRevisionPanelOpen} onClose={() => setIsRevisionPanelOpen(false)} />
+              <WritingStatsPanel isOpen={isWritingStatsOpen} onClose={() => setIsWritingStatsOpen(false)} />
+            </>
+          )}
 
           {/* AI Sidebar - Responsive Overlay */}
           {isSidebarOpen && (

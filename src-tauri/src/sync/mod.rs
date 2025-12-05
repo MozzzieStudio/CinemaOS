@@ -29,10 +29,3 @@ pub async fn init() -> Result<(), Box<dyn std::error::Error>> {
 
     Ok(())
 }
-
-pub async fn get_engine() -> Option<Arc<Mutex<SyncEngine>>> {
-    // This is a bit tricky with the double mutex, simplifying for now
-    // Ideally we'd return a clone of the engine if it was Arc'd itself
-    // For now, let's just expose the global
-    None
-}

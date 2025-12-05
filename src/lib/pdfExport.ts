@@ -31,12 +31,10 @@ const MARGIN_BOTTOM = 72;  // 1 inch
 
 // Content area
 const CONTENT_WIDTH = PAGE_WIDTH - MARGIN_LEFT - MARGIN_RIGHT;
-const CONTENT_HEIGHT = PAGE_HEIGHT - MARGIN_TOP - MARGIN_BOTTOM;
 
 // Font settings
 const FONT_SIZE = 12;
 const LINE_HEIGHT = 12; // 12pt Courier is standard
-const LINES_PER_PAGE = Math.floor(CONTENT_HEIGHT / LINE_HEIGHT);
 
 // Element-specific formatting (left margin offsets from MARGIN_LEFT)
 const ELEMENT_FORMATTING: Record<string, { leftOffset: number; maxWidth: number; uppercase?: boolean; centered?: boolean }> = {

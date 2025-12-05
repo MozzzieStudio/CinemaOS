@@ -271,7 +271,7 @@ function EditorContent(props: any) {
   const [isPreferencesOpen, setIsPreferencesOpen] = useState(false);
   const [isRevisionPanelOpen, setIsRevisionPanelOpen] = useState(false);
   const [sceneCount, setSceneCount] = useState(0);
-  const [currentFilePath, setCurrentFilePath] = useState<string | null>(null);
+  const [_currentFilePath, _setCurrentFilePath] = useState<string | null>(null);
 
   const applyFormat = useCallback((format: string, creator: () => any) => {
     editor.update(() => {
@@ -578,7 +578,7 @@ function EditorContent(props: any) {
             </button>
             <div className="w-px h-4 bg-white/10 mx-1" />
             <button
-              onClick={() => editor.dispatchCommand('SAVE', undefined)} // Using standard SAVE command key
+              onClick={() => window.dispatchEvent(new CustomEvent('editor-command', { detail: { type: 'SAVE' } }))}
               title="Save (Ctrl+S)"
               className="w-8 h-8 flex items-center justify-center rounded-md text-white/40 hover:text-sky-400 hover:bg-sky-400/10 transition-colors"
             >

@@ -105,7 +105,7 @@ pub async fn get_characters(project_id: String) -> Result<Vec<Character>, String
 pub async fn chat_with_agent(
     agent_name: String,
     message: String,
-    context: Option<String>,
+    _context: Option<String>,
 ) -> Result<String, String> {
     // TODO: Integrate with new AI router
     // For now, return a placeholder

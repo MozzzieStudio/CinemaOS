@@ -7,13 +7,6 @@
 
 import { useEffect, useState } from 'react';
 import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
-import { 
-  $getRoot,
-  $getSelection,
-  $isRangeSelection,
-  TextNode,
-  LexicalEditor,
-} from 'lexical';
 
 // Standard revision colors (in order)
 export const REVISION_COLORS = [
@@ -46,14 +39,14 @@ interface RevisionPluginProps {
   onConfigChange: (config: RevisionConfig) => void;
 }
 
-export default function RevisionPlugin({ config, onConfigChange }: RevisionPluginProps) {
+export default function RevisionPlugin({ config, onConfigChange: _onConfigChange }: RevisionPluginProps) {
   const [editor] = useLexicalComposerContext();
 
   // Track text changes when revision mode is enabled
   useEffect(() => {
     if (!config.enabled) return;
 
-    const removeListener = editor.registerTextContentListener((textContent) => {
+    const removeListener = editor.registerTextContentListener((_textContent) => {
       // Text has changed - mark as revised
       // This is a simplified implementation - full implementation would
       // track individual character changes

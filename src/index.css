@@ -1,0 +1,644 @@
+@import "tailwindcss";
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CINEMA OS — Premium Design System
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ─── Fonts ─── */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Courier+Prime:ital,wght@0,400;0,700;1,400;1,700&display=swap");
+
+/* ─── Design Tokens ─── */
+:root {
+  /* Colors */
+  --color-bg-primary: #0a0a0a;
+  --color-bg-secondary: #111111;
+  --color-bg-tertiary: #1a1a1a;
+  --color-bg-elevated: #222222;
+
+  --color-border: rgba(255, 255, 255, 0.08);
+  --color-border-hover: rgba(255, 255, 255, 0.15);
+  --color-border-active: rgba(139, 92, 246, 0.5);
+
+  --color-text-primary: rgba(255, 255, 255, 0.95);
+  --color-text-secondary: rgba(255, 255, 255, 0.7);
+  --color-text-muted: rgba(255, 255, 255, 0.4);
+
+  --color-accent: #8b5cf6;
+  --color-accent-hover: #a78bfa;
+  --color-accent-glow: rgba(139, 92, 246, 0.25);
+
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-error: #ef4444;
+
+  /* Typography */
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --font-mono: "Courier Prime", "Courier New", monospace;
+
+  /* Spacing */
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+  --space-2xl: 3rem;
+
+  /* Radius */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-full: 9999px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
+  --shadow-xl: 0 12px 48px rgba(0, 0, 0, 0.6);
+  --shadow-glow: 0 0 30px var(--color-accent-glow);
+
+  /* Transitions */
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 350ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Z-Index */
+  --z-dropdown: 100;
+  --z-modal: 200;
+  --z-toast: 300;
+
+  font-family: var(--font-sans);
+  line-height: 1.5;
+  font-weight: 400;
+  color-scheme: dark;
+  color: var(--color-text-primary);
+  background-color: var(--color-bg-primary);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html,
+body,
+#root {
+  min-height: 100vh;
+  margin: 0;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Animations
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes pulse-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 20px var(--color-accent-glow);
+  }
+  50% {
+    box-shadow: 0 0 40px var(--color-accent-glow);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Glassmorphism Effects
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.glass {
+  background: rgba(17, 17, 17, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--color-border);
+}
+
+.glass-strong {
+  background: rgba(26, 26, 26, 0.9);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--color-border);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Screenplay Formatting - Official Hollywood Industry Standards
+   
+   Reference: Final Draft, Writers Guild of America, Industry Standard
+   
+   Page Setup (8.5" x 11" Letter):
+   - Left margin: 1.5" (for three-hole punch binding)
+   - Right margin: 1.0" 
+   - Top margin: 1.0"
+   - Bottom margin: 1.0"
+   - Font: Courier 12pt (10 characters per inch)
+   - Lines per page: ~55
+   
+   Element Positions (from LEFT EDGE of page):
+   - Scene Heading: 1.5" (flush with left margin)
+   - Action: 1.5" to 7.5" (full width)
+   - Character: 3.7" from left edge (2.2" from left margin)
+   - Parenthetical: 3.1" from left edge (1.6" from left margin), max 2" wide
+   - Dialogue: 2.5" from left edge (1.0" from left margin), max 3.5" wide
+   - Transition: Right-aligned at 7.5" (1" from right edge)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* CSS Variables for screenplay measurements - MUST be at root level */
+:root {
+  --screenplay-char-indent: 2.2in;    /* Character: 3.7" - 1.5" = 2.2" */
+  --screenplay-dialogue-indent: 1in;  /* Dialogue: 2.5" - 1.5" = 1.0" */
+  --screenplay-paren-indent: 1.6in;   /* Parenthetical: 3.1" - 1.5" = 1.6" */
+  --screenplay-dialogue-width: 3.5in; /* Max dialogue width */
+  --screenplay-paren-width: 2in;      /* Max parenthetical width */
+}
+
+@layer components {
+
+  /* Scene Heading: INT./EXT. LOCATION - TIME */
+  .script-scene-heading {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 12pt;
+    line-height: 1;
+    text-transform: uppercase;
+    margin-top: 24pt; /* Double line space before */
+    margin-bottom: 12pt; /* Single line space after */
+    padding-left: 0;
+    color: var(--color-text-primary);
+  }
+
+  /* Action: Full width scene description */
+  .script-action {
+    font-family: var(--font-mono);
+    font-size: 12pt;
+    line-height: 1; /* Single line spacing */
+    margin-top: 12pt;
+    margin-bottom: 12pt;
+    padding-left: 0;
+    color: var(--color-text-primary);
+  }
+
+  /* Character Name: 3.7" from left page edge (centered above dialogue) */
+  .script-character {
+    font-family: var(--font-mono);
+    font-weight: 400;
+    font-size: 12pt;
+    line-height: 1;
+    text-transform: uppercase;
+    margin-top: 12pt;
+    margin-bottom: 0;
+    color: var(--color-text-primary);
+    /* Mobile: center it */
+    text-align: center;
+  }
+
+  /* Dialogue: 2.5" from left edge, max 3.5" wide */
+  .script-dialogue {
+    font-family: var(--font-mono);
+    font-size: 12pt;
+    line-height: 1;
+    margin-top: 0;
+    margin-bottom: 12pt;
+    color: var(--color-text-primary);
+    /* Mobile: center with padding */
+    text-align: center;
+    padding-left: 10%;
+    padding-right: 10%;
+  }
+
+  /* Parenthetical: 3.1" from left edge (between character and dialogue) */
+  .script-parenthetical {
+    font-family: var(--font-mono);
+    font-size: 12pt;
+    line-height: 1;
+    margin-top: 0;
+    margin-bottom: 0;
+    color: var(--color-text-primary);
+    /* Mobile: center */
+    text-align: center;
+  }
+
+  /* Transition: Right-aligned (CUT TO:, FADE OUT:, etc.) */
+  .script-transition {
+    font-family: var(--font-mono);
+    font-weight: 400;
+    font-size: 12pt;
+    line-height: 1;
+    text-transform: uppercase;
+    text-align: right;
+    margin-top: 24pt;
+    margin-bottom: 12pt;
+    color: var(--color-text-primary);
+  }
+
+  /* === Desktop: Full Hollywood Standard Formatting === 
+     Using !important to override any inline editor styles */
+  @media (min-width: 1024px) {
+    .script-scene-heading {
+      display: block !important;
+      padding-left: 0 !important;
+      margin-left: 0 !important;
+      text-align: left !important;
+    }
+
+    .script-action {
+      display: block !important;
+      padding-left: 0 !important;
+      margin-left: 0 !important;
+      text-align: left !important;
+    }
+
+    .script-character {
+      display: block !important;
+      text-align: left !important;
+      /* 2.2 inches from left margin (3.7" from page edge - 1.5" margin) */
+      margin-left: var(--screenplay-char-indent) !important;
+      padding-left: 0 !important;
+    }
+
+    .script-dialogue {
+      display: block !important;
+      text-align: left !important;
+      /* 1.0 inch from left margin (2.5" from page edge - 1.5" margin) */
+      margin-left: var(--screenplay-dialogue-indent) !important;
+      /* Max width 3.5 inches */
+      max-width: var(--screenplay-dialogue-width) !important;
+      padding-left: 0 !important;
+      padding-right: 0 !important;
+    }
+
+    .script-parenthetical {
+      display: block !important;
+      text-align: left !important;
+      /* 1.6 inches from left margin (3.1" from page edge - 1.5" margin) */
+      margin-left: var(--screenplay-paren-indent) !important;
+      /* Wrapped in parentheses, max 2 inches */
+      max-width: var(--screenplay-paren-width) !important;
+      padding-left: 0 !important;
+    }
+
+    .script-transition {
+      display: block !important;
+      text-align: right !important;
+      margin-left: auto !important;
+      padding-right: 0 !important;
+    }
+  }
+
+  /* Shot: Similar to scene heading (CLOSE UP, POV, etc.) */
+  .script-shot {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 1rem;
+    text-transform: uppercase;
+    margin: 1rem 0;
+    color: var(--color-text-primary);
+  }
+
+  /* Dual Dialogue: Side-by-side character dialogue */
+  .script-dual-dialogue {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin: 1rem 0;
+  }
+
+  .script-dual-dialogue .script-character,
+  .script-dual-dialogue .script-dialogue,
+  .script-dual-dialogue .script-parenthetical {
+    margin-left: 0;
+    margin-right: 0;
+    text-align: center;
+    width: 100%;
+    max-width: none;
+    padding: 0;
+  }
+
+  /* Token Mention: @Character, /Location, #Prop */
+  .script-token {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.125rem 0.5rem;
+    margin: 0 0.125rem;
+    background: linear-gradient(
+      135deg,
+      rgba(139, 92, 246, 0.2),
+      rgba(139, 92, 246, 0.1)
+    );
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    border-radius: var(--radius-sm);
+    color: #a78bfa;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+  }
+
+  .script-token:hover {
+    background: linear-gradient(
+      135deg,
+      rgba(139, 92, 246, 0.3),
+      rgba(139, 92, 246, 0.2)
+    );
+    border-color: rgba(139, 92, 246, 0.5);
+    box-shadow: 0 0 12px rgba(139, 92, 246, 0.2);
+    transform: translateY(-1px);
+  }
+
+  /* Token types with color coding */
+  .script-token[data-type="character"] {
+    background: linear-gradient(
+      135deg,
+      rgba(139, 92, 246, 0.2),
+      rgba(139, 92, 246, 0.1)
+    );
+    border-color: rgba(139, 92, 246, 0.3);
+    color: #a78bfa;
+  }
+
+  .script-token[data-type="location"] {
+    background: linear-gradient(
+      135deg,
+      rgba(16, 185, 129, 0.2),
+      rgba(16, 185, 129, 0.1)
+    );
+    border-color: rgba(16, 185, 129, 0.3);
+    color: #34d399;
+  }
+
+  .script-token[data-type="prop"] {
+    background: linear-gradient(
+      135deg,
+      rgba(245, 158, 11, 0.2),
+      rgba(245, 158, 11, 0.1)
+    );
+    border-color: rgba(245, 158, 11, 0.3);
+    color: #fbbf24;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Premium UI Components
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@layer components {
+  /* Card with glassmorphism */
+  .card {
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    transition: all var(--transition-normal);
+  }
+
+  .card:hover {
+    border-color: var(--color-border-hover);
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-2px);
+  }
+
+  .card-elevated {
+    background: var(--color-bg-tertiary);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+  }
+
+  /* Primary Button */
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1.25rem;
+    background: linear-gradient(135deg, var(--color-accent), #7c3aed);
+    color: white;
+    font-weight: 600;
+    font-size: 0.875rem;
+    border-radius: var(--radius-md);
+    border: none;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+  }
+
+  .btn-primary:hover {
+    background: linear-gradient(135deg, var(--color-accent-hover), #8b5cf6);
+    box-shadow: var(--shadow-glow);
+    transform: translateY(-1px);
+  }
+
+  .btn-primary:active {
+    transform: translateY(0);
+  }
+
+  /* Secondary Button */
+  .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1.25rem;
+    background: transparent;
+    color: var(--color-text-secondary);
+    font-weight: 500;
+    font-size: 0.875rem;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+  }
+
+  .btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: var(--color-border-hover);
+    color: var(--color-text-primary);
+  }
+
+  /* Ghost Button */
+  .btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    background: transparent;
+    color: var(--color-text-muted);
+    border-radius: var(--radius-md);
+    border: none;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+  }
+
+  .btn-ghost:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--color-text-primary);
+  }
+
+  /* Input Field */
+  .input {
+    width: 100%;
+    padding: 0.625rem 0.875rem;
+    background: var(--color-bg-primary);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    color: var(--color-text-primary);
+    font-size: 0.875rem;
+    outline: none;
+    transition: all var(--transition-fast);
+  }
+
+  .input::placeholder {
+    color: var(--color-text-muted);
+  }
+
+  .input:focus {
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 3px var(--color-accent-glow);
+  }
+
+  /* Badge */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.5rem;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-full);
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--color-text-secondary);
+  }
+
+  .badge-accent {
+    background: var(--color-accent-glow);
+    color: var(--color-accent-hover);
+  }
+
+  .badge-success {
+    background: rgba(16, 185, 129, 0.2);
+    color: #34d399;
+  }
+
+  /* Loading Skeleton */
+  .skeleton {
+    background: linear-gradient(
+      90deg,
+      var(--color-bg-tertiary) 0%,
+      var(--color-bg-elevated) 50%,
+      var(--color-bg-tertiary) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: var(--radius-sm);
+  }
+
+  /* Spinner */
+  .spinner {
+    width: 1.25rem;
+    height: 1.25rem;
+    border: 2px solid var(--color-border);
+    border-top-color: var(--color-accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Scrollbar
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Focus States (Accessibility)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Animation Classes
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.animate-fade-in {
+  animation: fadeIn var(--transition-normal) ease-out;
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp var(--transition-normal) ease-out;
+}
+
+.animate-fade-in-scale {
+  animation: fadeInScale var(--transition-normal) ease-out;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}

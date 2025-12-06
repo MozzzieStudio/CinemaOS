@@ -1,7 +1,7 @@
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import "./index.css";
 import ScriptEditor from "./components/editor/ScriptEditor";
-import ChatSidebar from "./components/ai/ChatSidebar";
+import { AgentChatPanel } from "./components/AgentChat";
 import InfiniteCanvas from "./components/studio/InfiniteCanvas";
 import PreProductionLayout from "./components/preproduction/PreProductionLayout";
 import RevisionPanel from "./components/editor/RevisionPanel";
@@ -12,6 +12,7 @@ import { useMoresContinueds } from "./components/editor/plugins/MoresContinuedsP
 import { createMenus } from "./config/menus";
 import { Toaster } from "./components/ui/sonner";
 import { CommandPalette } from "./components/CommandPalette";
+import type { AgentContext, ScriptContext } from "./types/agents";
 
 type ViewMode = "writer" | "preproduction" | "studio";
 
@@ -48,6 +49,26 @@ function App() {
   const moresContinuedsConfig = useMoresContinueds();
 
   const projectId = "project:demo";
+
+  // Agent Context State
+  const [agentContext, setAgentContext] = useState<AgentContext>({
+    mode: 'writer',
+    project_name: 'Untitled Screenplay',
+  });
+
+  // Callback to update script context from editor
+  const handleScriptContextChange = useCallback((scriptContext: ScriptContext) => {
+    setAgentContext(prev => ({
+      ...prev,
+      script: scriptContext,
+    }));
+  }, []);
+
+  // Callback when agent wants to update script
+  const handleAgentUpdateScript = useCallback((content: string, mode: string) => {
+    // Dispatch to editor
+    dispatchCommand('AGENT_UPDATE_SCRIPT', { content, mode });
+  }, []);
 
   // Close menu on outside click
   useEffect(() => {
@@ -140,6 +161,8 @@ function App() {
             moresContinuedsConfig={moresContinuedsConfig.config}
             // AI Sidebar
             onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+            // Agent Context
+            onScriptContextChange={handleScriptContextChange}
           />
         );
       case "preproduction":
@@ -291,10 +314,13 @@ function App() {
             </>
           )}
 
-          {/* AI Sidebar - Responsive Overlay */}
+          {/* AI Agent Sidebar */}
           {isSidebarOpen && (
-            <div className="absolute right-0 top-0 bottom-0 z-40 w-full sm:w-80 md:static md:w-80 md:shrink-0 border-l border-white/[0.06] bg-[#0a0a0a] animate-in slide-in-from-right duration-200 shadow-2xl md:shadow-none">
-              <ChatSidebar />
+            <div className="absolute right-0 top-0 bottom-0 z-40 w-full sm:w-[380px] md:static md:w-[380px] md:shrink-0 border-l border-white/[0.06] bg-[#0a0a0a] animate-in slide-in-from-right duration-200 shadow-2xl md:shadow-none">
+              <AgentChatPanel
+                context={agentContext}
+                onUpdateScript={handleAgentUpdateScript}
+              />
             </div>
           )}
         </main>

@@ -64,7 +64,7 @@ trigger: always_on
 
 - **Smart Onboarding**: System analyzes hardware and recommends Local vs. Cloud balance.
 - **User Choice**: Toggle "Process Locally" (Privacy) or "Process in Cloud" (Speed).
-- **Open Source Freedom**: Run Llama 3, Mistral, etc., locally if hardware permits.
+- **Open Source Freedom**: Run Llama 4, Mistral, etc., locally if hardware permits.
 
 ### C. Agentic First (User Command, AI Execution)
 

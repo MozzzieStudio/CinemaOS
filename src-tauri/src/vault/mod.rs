@@ -1,3 +1,4 @@
+pub mod api;
 pub mod models;
 pub mod tokens;
 
@@ -26,6 +27,14 @@ pub async fn init() -> Result<(), Box<dyn std::error::Error>> {
     *global_db = Some(db);
 
     println!("✅ Vault Initialized: SurrealDB connected at {}", db_path);
+
+    // Start the Vault HTTP API in background
+    let port = 8080;
+    tauri::async_runtime::spawn(async move {
+        if let Err(e) = api::start_vault_api(port).await {
+            eprintln!("❌ Vault API error: {}", e);
+        }
+    });
 
     Ok(())
 }

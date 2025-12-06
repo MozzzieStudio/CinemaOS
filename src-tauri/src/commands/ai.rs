@@ -83,10 +83,10 @@ pub fn get_available_local_models() -> Vec<ModelDefinition> {
 // AGENT COMMANDS
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/// Get all agent roles
+/// Get all agent roles with details
 #[tauri::command]
 #[specta::specta]
-pub fn get_agent_roles() -> Vec<AgentRoleInfo> {
+pub fn get_agent_roles_detailed() -> Vec<AgentRoleInfo> {
     AgentRole::all()
         .iter()
         .map(|role| AgentRoleInfo {
@@ -105,10 +105,10 @@ pub struct AgentRoleInfo {
     pub role: AgentRole,
 }
 
-/// Chat with a specific agent
+/// Chat with a specific agent (legacy - uses placeholder)
 #[tauri::command]
 #[specta::specta]
-pub async fn agent_chat(
+pub async fn agent_chat_legacy(
     role: AgentRole,
     message: String,
     history: Vec<ConversationTurn>,
@@ -126,10 +126,10 @@ pub async fn agent_chat(
     crew.process(role, input).await
 }
 
-/// Route a message to the best agent based on intent
+/// Route a message to the best agent based on intent (legacy)
 #[tauri::command]
 #[specta::specta]
-pub fn route_to_agent(message: String) -> AgentRole {
+pub fn route_to_agent_legacy(message: String) -> AgentRole {
     let crew = get_crew();
     crew.route_by_intent(&message)
 }

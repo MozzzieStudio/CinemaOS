@@ -2,10 +2,13 @@
 //!
 //! Exports all Tauri commands for use in lib.rs
 
+pub mod agents;
 pub mod ai;
 pub mod comfyui;
 pub mod files;
+pub mod installer;
 pub mod tokens;
+pub mod workflow;
 
 // Re-export existing vault commands
 use crate::vault::{

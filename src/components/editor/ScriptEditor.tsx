@@ -97,6 +97,63 @@ function StatsPlugin({ onStatsChange }: { onStatsChange: (words: number, pages: 
   return null;
 }
 
+// Script Context Extraction Plugin
+function ScriptContextPlugin({ onContextChange }: { onContextChange?: (ctx: any) => void }) {
+  const [editor] = useLexicalComposerContext();
+  
+  useEffect(() => {
+    if (!onContextChange) return;
+    
+    return editor.registerUpdateListener(({ editorState }) => {
+      editorState.read(() => {
+        const root = $getRoot();
+        const fullText = root.getTextContent();
+        const selection = $getSelection();
+        
+        let selectionText: string | undefined;
+        let cursorLine: number | undefined;
+        
+        if ($isRangeSelection(selection)) {
+          selectionText = selection.getTextContent();
+          const anchor = selection.anchor;
+          const textBefore = fullText.substring(0, anchor.offset);
+          cursorLine = (textBefore.match(/\n/g) || []).length + 1;
+        }
+        
+        // Extract current scene
+        const lines = fullText.split('\n');
+        let currentScene: string | undefined;
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (trimmed.startsWith('INT.') || trimmed.startsWith('EXT.')) {
+            currentScene = trimmed;
+          }
+        }
+        
+        // Extract characters
+        const characters: string[] = [];
+        const charPattern = /^([A-Z][A-Z\s]+)$/;
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (charPattern.test(trimmed) && !trimmed.startsWith('INT.') && !trimmed.startsWith('EXT.')) {
+            if (!characters.includes(trimmed)) characters.push(trimmed);
+          }
+        }
+        
+        onContextChange({
+          full_text: fullText,
+          selection: selectionText,
+          cursor_line: cursorLine,
+          current_scene: currentScene,
+          scene_characters: characters,
+        });
+      });
+    });
+  }, [editor, onContextChange]);
+  
+  return null;
+}
+
 /**
  * DynamicPlaceholder — Adjusts position based on active screenplay element type
  */
@@ -417,6 +474,7 @@ function EditorContent(props: any) {
       <BookmarksPlugin bookmarks={bookmarks} onBookmarksChange={setBookmarks} onNavigateToBookmark={(bookmark) => console.log('Navigate to:', bookmark)} />
       <SceneNumbersPlugin config={sceneNumbersConfig} />
       <MoresContinuedsPlugin config={moresContinuedsConfig} pageHeight={54} />
+      <ScriptContextPlugin onContextChange={props.onScriptContextChange} />
 
       {/* MODALS */}
       <BeatBoard isOpen={isBeatBoardOpen} onClose={() => setIsBeatBoardOpen(false)} />

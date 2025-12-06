@@ -30,16 +30,16 @@ Managed by the **Main Agent**, these specialized agents cover the pipeline:
 
 | Role                        | Responsibility                             | Supported Models (User Choice)          |
 | :-------------------------- | :----------------------------------------- | :-------------------------------------- |
-| **1. The Showrunner**       | Guardian of the Vault. Consistency & Tone. | Gemini 2.5 Pro, Claude Opus 4, GPT-5    |
-| **2. Scriptwriter**         | Screenplay, Dialogue, Plot.                | Llama 4, Gemini 2.5, Claude Sonnet 4    |
-| **3. Cinematographer**      | Lenses, lighting, camera angles.           | Gemini 2.5 Pro, GPT-5 Vision            |
+| **1. The Showrunner**       | Guardian of the Vault. Consistency & Tone. | Gemini 3 Pro, Claude Opus 4.5, GPT-5    |
+| **2. Scriptwriter**         | Screenplay, Dialogue, Plot.                | Llama 4, Gemini 3, Claude Sonnet 4.5   |
+| **3. Cinematographer**      | Lenses, lighting, camera angles.           | Gemini 3 Pro, GPT-5 Vision            |
 | **4. Casting Director**     | Character consistency, FaceID.             | SAM 3, Kling O1, Flux 2 Pro             |
 | **5. Art Director**         | Locations, Set Design, Props.              | Qwen 3-VL, Meshy 4, Kling Image O1      |
 | **6. Voice Actors**         | TTS, Dialogue performance.                 | ElevenLabs v3, Kling Video 2.6 (Native) |
 | **7. Music & SFX Director** | Score, Foley, Sound Design.                | Suno v4, AudioCraft, Lyria 2            |
-| **8. Photography Director** | Image Generation.                          | Flux 2 Pro, Kling Image O1, Imagen 3    |
+| **8. Photography Director** | Image Generation.                          | Flux 2 Pro, Kling Image O1, Imagen 4   |
 | **9. Camera Director**      | Video Generation.                          | Kling O1, Veo 3.1, Sora 2 Pro, Wan 2.5  |
-| **10. Editor**              | Montage, Pacing, Assembly.                 | Gemini 2.5 Pro, Llama 4 Vision          |
+| **10. Editor**              | Montage, Pacing, Assembly.                 | Gemini 3 Pro, Llama 4 Vision          |
 | **11. The Colorist**        | Color grading, LUTs.                       | Kling VFX House, Deep Learning LUTs     |
 
 ## Critical Rules

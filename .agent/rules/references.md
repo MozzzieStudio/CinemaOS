@@ -280,7 +280,6 @@ trigger: always_on
 - [Transformers v5](https://huggingface.co/blog/transformers-v5)
 - [smolagents](https://huggingface.co/blog/smolagents)
 - [swift-huggingface](https://huggingface.co/blog/swift-huggingface)
-- [Diffusers FLUX-2](https://huggingface.co/blog/flux-2)
 
 ### Black Forest Labs (Flux)
 

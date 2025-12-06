@@ -1,0 +1,104 @@
+    Checking cinemaos-api v0.1.0 (D:\CinemaOS\backend)
+warning: unused import: `firestore::FirestoreClient`
+ --> src\db\mod.rs:6:9
+  |
+6 | pub use firestore::FirestoreClient;
+  |         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `storage::StorageClient`
+ --> src\db\mod.rs:7:9
+  |
+7 | pub use storage::StorageClient;
+  |         ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `fal::FalClient`
+ --> src\providers\mod.rs:6:9
+  |
+6 | pub use fal::FalClient;
+  |         ^^^^^^^^^^^^^^
+
+warning: unused import: `vertex::VertexClient`
+ --> src\providers\mod.rs:7:9
+  |
+7 | pub use vertex::VertexClient;
+  |         ^^^^^^^^^^^^^^^^^^^^
+
+warning: unused variable: `content_type`
+  --> src\db\storage.rs:23:59
+   |
+23 |     pub async fn get_upload_url(&self, object_name: &str, content_type: &str) -> Result<String> {
+   |                                                           ^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_content_type`
+   |
+   = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: field `agent_role` is never read
+  --> src\routes\chat.rs:18:9
+   |
+15 | pub struct ClientChatRequest {
+   |            ----------------- field in this struct
+...
+18 |     pub agent_role: Option<String>,
+   |         ^^^^^^^^^^
+   |
+   = note: `ClientChatRequest` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: struct `ChatResponse` is never constructed
+  --> src\routes\chat.rs:23:12
+   |
+23 | pub struct ChatResponse {
+   |            ^^^^^^^^^^^^
+
+warning: fields `logs` and `output` are never read
+  --> src\routes\webhooks.rs:11:9
+   |
+ 8 | pub struct FalWebhookPayload {
+   |            ----------------- fields in this struct
+...
+11 |     pub logs: Option<Vec<String>>,
+   |         ^^^^
+12 |     pub output: Option<serde_json::Value>,
+   |         ^^^^^^
+   |
+   = note: `FalWebhookPayload` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+
+warning: struct `PubSubClient` is never constructed
+ --> src\queue\pubsub.rs:6:12
+  |
+6 | pub struct PubSubClient {
+  |            ^^^^^^^^^^^^
+
+warning: associated items `new` and `publish` are never used
+  --> src\queue\pubsub.rs:13:12
+   |
+11 | impl PubSubClient {
+   | ----------------- associated items in this implementation
+12 |     /// Create a new Pub/Sub client
+13 |     pub fn new(project_id: &str, topic: &str) -> Self {
+   |            ^^^
+...
+21 |     pub async fn publish(&self, _message: serde_json::Value) -> Result<String> {
+   |                  ^^^^^^^
+
+warning: struct `TasksClient` is never constructed
+ --> src\queue\tasks.rs:6:12
+  |
+6 | pub struct TasksClient {
+  |            ^^^^^^^^^^^
+
+warning: associated items `new` and `enqueue` are never used
+  --> src\queue\tasks.rs:14:12
+   |
+12 | impl TasksClient {
+   | ---------------- associated items in this implementation
+13 |     /// Create a new Cloud Tasks client
+14 |     pub fn new(project_id: &str, location: &str, queue: &str) -> Self {
+   |            ^^^
+...
+23 |     pub async fn enqueue(&self, _url: &str, _payload: serde_json::Value) -> Result<String> {
+   |                  ^^^^^^^
+
+warning: `cinemaos-api` (bin "cinemaos-api") generated 12 warnings (run `cargo fix --bin "cinemaos-api"` to apply 4 suggestions)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.21s

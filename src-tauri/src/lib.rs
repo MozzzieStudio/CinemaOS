@@ -1,8 +1,13 @@
 pub mod ai;
 pub mod commands;
+pub mod errors;
 pub mod graphics;
+pub mod installer;
 pub mod sync;
 pub mod vault;
+
+#[cfg(test)]
+mod tests;
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 
@@ -60,7 +65,43 @@ pub fn run() {
             commands::files::open_file_dialog,
             commands::files::save_file_dialog,
             commands::files::save_file_to_path,
-            commands::files::export_pdf_dialog
+            commands::files::export_pdf_dialog,
+            // ComfyUI commands
+            commands::comfyui::comfyui_ping,
+            commands::comfyui::comfyui_status,
+            commands::comfyui::comfyui_get_models,
+            commands::comfyui::comfyui_execute,
+            commands::comfyui::comfyui_get_history,
+            commands::comfyui::comfyui_get_image,
+            // Installer commands
+            commands::installer::get_install_state,
+            commands::installer::is_system_ready,
+            commands::installer::run_installation,
+            commands::installer::start_comfyui,
+            commands::installer::stop_comfyui,
+            commands::installer::is_comfyui_running,
+            // Hardware detection
+            commands::installer::get_hardware_info,
+            commands::installer::get_all_model_recommendations,
+            commands::installer::get_recommended_models_for_hardware,
+            commands::installer::get_runnable_models_for_hardware,
+            // Model downloads
+            commands::installer::get_available_model_sources,
+            commands::installer::check_model_downloaded,
+            commands::installer::get_downloaded_model_ids,
+            commands::installer::download_model_by_id,
+            commands::installer::check_ollama_installed,
+            commands::installer::get_ollama_model_list,
+            commands::installer::pull_ollama_model,
+            // Workflow generation
+            commands::workflow::generate_comfyui_workflow,
+            commands::workflow::generate_workflow_from_agent,
+            // Agent chat (full context + actions)
+            commands::agents::agent_chat_full,
+            commands::agents::execute_agent_action,
+            commands::agents::execute_agent_actions,
+            commands::agents::route_message_to_agent,
+            commands::agents::get_agent_roles
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

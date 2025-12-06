@@ -30,7 +30,7 @@ once_cell = "1.21.3"
 loro = "1.0.3"
 chrono = { version = "0.4", features = ["serde"] }
 async-trait = "0.1.89"
-reqwest = { version = "0.12", features = ["json", "rustls-tls"] }
+reqwest = { version = "0.12", features = ["json", "rustls-tls", "stream"] }
 dotenvy = "0.15"
 # New dependencies for Fase 0-1
 specta = "2.0.0-rc.21"
@@ -45,3 +45,8 @@ thiserror = "2.0"
 tokio-tungstenite = { version = "0.26", features = ["native-tls"] }
 futures-util = "0.3"
 url = "2.5"
+# Installer
+dirs = "5"
+# Vault API
+axum = "0.7"
+base64 = "0.22"

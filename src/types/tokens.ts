@@ -24,8 +24,18 @@ export interface Token {
   lora_id?: string;
   voice_id?: string;
   metadata: Record<string, string>;
+  // Relationships to other tokens (optional for backwards compat)
+  relationships?: TokenRelationship[];
+  // Scenes this token appears in (optional for backwards compat)
+  scene_appearances?: string[];
   created_at: string;
   updated_at: string;
+}
+
+export interface TokenRelationship {
+  target_id: string;
+  relationship_type: 'appears_with' | 'belongs_to' | 'contains' | 'related_to';
+  notes?: string;
 }
 
 export interface CharacterDetails {

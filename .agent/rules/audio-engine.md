@@ -23,6 +23,7 @@ You ensure that the user hears exactly what they see. You manage the Audio Graph
 3.  **GenAI Audio**:
 
     - **Voice**: Integrate **ElevenLabs** for TTS.
+    - **Native Video+Audio**: Use **Kling Video 2.6** for synced dialogue and SFX generation.
     - **Music/SFX**: Integrate **ElevenLabs** **Suno** and **AudioCraft**.
 
 4.  **Synchronization**:

@@ -59,21 +59,98 @@ export function $isTokenNode(node: LexicalNode | null | undefined): node is Toke
 }
 
 // --- Scene Heading ---
-export type SerializedSceneHeadingNode = SerializedParagraphNode;
+export type SerializedSceneHeadingNode = Spread<
+  {
+    isOmitted: boolean;
+    isLocked: boolean;
+  },
+  SerializedParagraphNode
+>;
 
 export class SceneHeadingNode extends ParagraphNode {
+  __isOmitted: boolean;
+  __isLocked: boolean;
+
   static getType(): string {
     return "scene-heading";
   }
 
   static clone(node: SceneHeadingNode): SceneHeadingNode {
-    return new SceneHeadingNode(node.__key);
+    const clone = new SceneHeadingNode(node.__key);
+    clone.__isOmitted = node.__isOmitted;
+    clone.__isLocked = node.__isLocked;
+    return clone;
   }
 
-  createDOM(config: any): HTMLElement {
+  constructor(key?: NodeKey) {
+    super(key);
+    this.__isOmitted = false;
+    this.__isLocked = false;
+  }
+
+  createDOM(config: EditorConfig): HTMLElement {
     const dom = super.createDOM(config);
     dom.classList.add("script-scene-heading");
+    if (this.__isOmitted) {
+      dom.classList.add("scene-omitted");
+    }
+    if (this.__isLocked) {
+      dom.classList.add("scene-locked");
+    }
     return dom;
+  }
+
+  updateDOM(prevNode: SceneHeadingNode, dom: HTMLElement): boolean {
+    if (prevNode.__isOmitted !== this.__isOmitted) {
+      if (this.__isOmitted) {
+        dom.classList.add("scene-omitted");
+      } else {
+        dom.classList.remove("scene-omitted");
+      }
+    }
+    if (prevNode.__isLocked !== this.__isLocked) {
+      if (this.__isLocked) {
+        dom.classList.add("scene-locked");
+      } else {
+        dom.classList.remove("scene-locked");
+      }
+    }
+    return false;
+  }
+
+  exportJSON(): SerializedSceneHeadingNode {
+    return {
+      ...super.exportJSON(),
+      isOmitted: this.__isOmitted,
+      isLocked: this.__isLocked,
+      type: "scene-heading",
+      version: 1,
+    };
+  }
+
+  static importJSON(serializedNode: SerializedSceneHeadingNode): SceneHeadingNode {
+    const node = $createSceneHeadingNode();
+    node.__isOmitted = serializedNode.isOmitted || false;
+    node.__isLocked = serializedNode.isLocked || false;
+    return node;
+  }
+
+  setOmitted(isOmitted: boolean): void {
+    const self = this.getWritable();
+    self.__isOmitted = isOmitted;
+  }
+
+  isOmitted(): boolean {
+    return this.__isOmitted;
+  }
+
+  setLocked(isLocked: boolean): void {
+    const self = this.getWritable();
+    self.__isLocked = isLocked;
+  }
+
+  isLocked(): boolean {
+    return this.__isLocked;
   }
 }
 

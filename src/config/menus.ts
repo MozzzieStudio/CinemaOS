@@ -64,8 +64,9 @@ export const createMenus = (
         }},
         { label: 'Save As...', shortcut: 'Ctrl+Shift+S', action: () => dispatchCommand('SAVE_AS') },
         { divider: true },
-        { label: 'Import FDX...', action: () => document.getElementById('file-import-fdx')?.click() },
-        { label: 'Import PDF...', action: () => document.getElementById('file-import-pdf')?.click() },
+        { label: 'Import FDX...', action: () => dispatchCommand('EXPORT_FDX') }, // Changed to ensure panel opens
+        { label: 'Import PDF...', action: () => dispatchCommand('EXPORT_PDF') }, // Changed to ensure panel opens
+        { label: 'Import Fountain...', action: () => dispatchCommand('EXPORT_FDX') }, // Opens panel
         { divider: true },
         { label: 'Export FDX...', action: () => dispatchCommand('EXPORT_FDX') },
         { label: 'Export PDF...', action: () => dispatchCommand('EXPORT_PDF') },
@@ -130,6 +131,7 @@ export const createMenus = (
         { label: 'Bookmark', action: () => dispatchCommand('BOOKMARKS') },
         { label: 'Mores/Continueds', icon: pluginConfig.moresContinueds.enabled ? '✓' : '', action: () => pluginConfig.moresContinueds.toggle() },
         { divider: true },
+        { label: 'Act Break...', icon: '🎭', action: () => dispatchCommand('INSERT_ACT_BREAK') },
         { label: 'Page Break', shortcut: 'Ctrl+Enter', action: () => dispatchCommand('PAGE_BREAK') },
       ]
     },
@@ -139,8 +141,13 @@ export const createMenus = (
         { label: 'Scene Numbers...', icon: pluginConfig.sceneNumbers.enabled ? '✓' : '', action: () => pluginConfig.sceneNumbers.toggle() },
         { label: 'Revision Mode...', action: () => setIsRevisionPanelOpen(true) },
         { divider: true },
+        { label: 'Lock Scenes...', icon: '🔒', action: () => dispatchCommand('SCENE_LOCK_PANEL') },
+        { label: 'Omit Scene', icon: '⊘', action: () => dispatchCommand('OMIT_SCENE') },
+        { divider: true },
+        { label: 'Version History...', icon: '📜', shortcut: 'Ctrl+H', action: () => dispatchCommand('VERSION_HISTORY') },
+        { divider: true },
         { label: 'Reports', icon: '📊', action: () => dispatchCommand('REPORTS') },
-        { label: 'Breakdown Tags...', action: () => toast.info("Coming Soon", { description: "Breakdown features are in development." }) },
+        { label: 'Breakdown Reports...', icon: '🏷️', action: () => dispatchCommand('BREAKDOWN_REPORT') },
       ]
     },
     {
@@ -159,6 +166,10 @@ export const createMenus = (
         { label: 'Bookmarks', shortcut: 'Ctrl+Shift+B', action: () => dispatchCommand('BOOKMARKS') },
         { divider: true },
         { label: 'Preferences...', action: () => dispatchCommand('PREFERENCES') },
+        { divider: true },
+        { label: 'Speaking Mode...', icon: '🗣️', action: () => dispatchCommand('SPEAKING_MODE') },
+        { label: 'Character Highlighting...', icon: '🔦', action: () => dispatchCommand('CHARACTER_HIGHLIGHT') },
+        { label: 'Compare Scripts...', icon: '⚖️', action: () => dispatchCommand('SCRIPT_COMPARE') },
       ]
     },
     {

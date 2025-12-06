@@ -3,6 +3,12 @@
  * 
  * Generates properly formatted screenplay PDFs using jsPDF.
  * Follows industry-standard formatting: Courier 12pt, specific margins.
+ * 
+ * Features:
+ * - Standard screenplay formatting
+ * - Watermark support (diagonal, header, footer)
+ * - Revision colored pages
+ * - Revision asterisks in margin
  */
 
 import { jsPDF } from 'jspdf';
@@ -10,6 +16,7 @@ import { jsPDF } from 'jspdf';
 export interface ScriptElement {
   type: string;
   text: string;
+  hasRevision?: boolean; // For asterisk marking
 }
 
 export interface TitlePageData {
@@ -18,6 +25,35 @@ export interface TitlePageData {
   draftDate?: string;
   contact?: string;
 }
+
+export interface WatermarkConfig {
+  enabled: boolean;
+  text: string;
+  opacity: number;
+  position: 'diagonal' | 'footer' | 'header';
+  fontSize: number;
+}
+
+export interface RevisionConfig {
+  enabled: boolean;
+  colorName: string;
+  colorHex: string;
+  date?: string;
+  showAsterisks: boolean;
+}
+
+// Standard revision colors (with hex values for PDF)
+export const REVISION_COLORS: Record<string, { hex: string; rgb: [number, number, number] }> = {
+  'WHITE': { hex: '#ffffff', rgb: [255, 255, 255] },
+  'BLUE': { hex: '#cce5ff', rgb: [204, 229, 255] },
+  'PINK': { hex: '#ffe0eb', rgb: [255, 224, 235] },
+  'YELLOW': { hex: '#fff9c4', rgb: [255, 249, 196] },
+  'GREEN': { hex: '#c8e6c9', rgb: [200, 230, 201] },
+  'GOLDENROD': { hex: '#ffe082', rgb: [255, 224, 130] },
+  'BUFF': { hex: '#fff8e1', rgb: [255, 248, 225] },
+  'SALMON': { hex: '#ffccbc', rgb: [255, 204, 188] },
+  'CHERRY': { hex: '#f8bbd9', rgb: [248, 187, 217] },
+};
 
 // Screenplay page dimensions (in points, 72 points = 1 inch)
 const PAGE_WIDTH = 612;  // 8.5 inches
@@ -51,7 +87,9 @@ const ELEMENT_FORMATTING: Record<string, { leftOffset: number; maxWidth: number;
  */
 export function generatePDF(
   elements: ScriptElement[],
-  titlePage?: TitlePageData
+  titlePage?: TitlePageData,
+  watermark?: WatermarkConfig,
+  revision?: RevisionConfig
 ): jsPDF {
   const doc = new jsPDF({
     unit: 'pt',
@@ -72,6 +110,11 @@ export function generatePDF(
     currentPage++;
   }
 
+  // Apply revision color background to first page
+  if (revision?.enabled && revision.colorName !== 'WHITE') {
+    addRevisionBackground(doc, revision);
+  }
+
   // Process each element
   for (const element of elements) {
     const formatting = ELEMENT_FORMATTING[element.type] || ELEMENT_FORMATTING['action'];
@@ -86,7 +129,10 @@ export function generatePDF(
       doc.addPage();
       currentPage++;
       currentY = MARGIN_TOP;
-      addPageNumber(doc, currentPage);
+      addPageNumber(doc, currentPage, revision);
+      if (revision?.enabled && revision.colorName !== 'WHITE') {
+        addRevisionBackground(doc, revision);
+      }
       continue;
     }
 
@@ -100,12 +146,22 @@ export function generatePDF(
       doc.addPage();
       currentPage++;
       currentY = MARGIN_TOP;
-      addPageNumber(doc, currentPage);
+      addPageNumber(doc, currentPage, revision);
+      if (revision?.enabled && revision.colorName !== 'WHITE') {
+        addRevisionBackground(doc, revision);
+      }
     }
 
     // Add blank line before scene headings (except at page top)
     if (element.type === 'scene-heading' && currentY > MARGIN_TOP + LINE_HEIGHT) {
       currentY += LINE_HEIGHT;
+    }
+
+    // Draw revision asterisk if enabled and element has revision
+    if (revision?.showAsterisks && element.hasRevision) {
+      doc.setTextColor(100, 100, 100);
+      doc.text('*', MARGIN_LEFT - 20, currentY);
+      doc.setTextColor(0, 0, 0);
     }
 
     // Draw text
@@ -122,10 +178,68 @@ export function generatePDF(
 
   // Add page number to first content page
   if (currentPage === 1 || (titlePage && currentPage === 2)) {
-    addPageNumber(doc, titlePage ? currentPage - 1 : currentPage);
+    addPageNumber(doc, titlePage ? currentPage - 1 : currentPage, revision);
+  }
+
+  // Add watermark to all pages
+  if (watermark?.enabled) {
+    const totalPages = doc.getNumberOfPages();
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i);
+      addWatermark(doc, watermark);
+    }
   }
 
   return doc;
+}
+
+/**
+ * Add revision background color to page
+ */
+function addRevisionBackground(doc: jsPDF, revision: RevisionConfig): void {
+  const color = REVISION_COLORS[revision.colorName];
+  if (!color) return;
+
+  doc.setFillColor(color.rgb[0], color.rgb[1], color.rgb[2]);
+  doc.rect(0, 0, PAGE_WIDTH, PAGE_HEIGHT, 'F');
+}
+
+/**
+ * Add watermark to page
+ */
+function addWatermark(doc: jsPDF, watermark: WatermarkConfig): void {
+  const prevFontSize = doc.getFontSize();
+  
+  doc.setFontSize(watermark.fontSize);
+  doc.setTextColor(150, 150, 150);
+  
+  // Save current state for opacity
+  const gState = doc.GState({ opacity: watermark.opacity });
+  doc.setGState(gState);
+
+  const centerX = PAGE_WIDTH / 2;
+  const centerY = PAGE_HEIGHT / 2;
+
+  switch (watermark.position) {
+    case 'diagonal':
+      // Rotate and center
+      doc.text(watermark.text, centerX, centerY, { 
+        align: 'center',
+        angle: 45 
+      });
+      break;
+    case 'header':
+      doc.text(watermark.text, centerX, MARGIN_TOP / 2, { align: 'center' });
+      break;
+    case 'footer':
+      doc.text(watermark.text, centerX, PAGE_HEIGHT - MARGIN_BOTTOM / 2, { align: 'center' });
+      break;
+  }
+
+  // Reset state
+  doc.setGState(doc.GState({ opacity: 1 }));
+  doc.setTextColor(0, 0, 0);
+  doc.setFontSize(prevFontSize);
 }
 
 /**
@@ -159,12 +273,22 @@ function addTitlePage(doc: jsPDF, data: TitlePageData): void {
 }
 
 /**
- * Add page number to top right
+ * Add page number to top right (and revision info if applicable)
  */
-function addPageNumber(doc: jsPDF, pageNum: number): void {
+function addPageNumber(doc: jsPDF, pageNum: number, revision?: RevisionConfig): void {
   doc.setFont('Courier', 'normal');
   doc.setFontSize(12);
+  
+  // Page number on right
   doc.text(`${pageNum}.`, PAGE_WIDTH - MARGIN_RIGHT, MARGIN_TOP / 2, { align: 'right' });
+  
+  // Revision info on left (if revision mode is active)
+  if (revision?.enabled && revision.colorName !== 'WHITE') {
+    const revisionText = revision.date 
+      ? `${revision.colorName} REVISION - ${revision.date}`
+      : `${revision.colorName} REVISION`;
+    doc.text(revisionText, MARGIN_LEFT, MARGIN_TOP / 2);
+  }
 }
 
 /**
@@ -174,7 +298,8 @@ function addPageNumber(doc: jsPDF, pageNum: number): void {
 export async function downloadPDF(
   elements: ScriptElement[],
   filename: string = 'screenplay.pdf',
-  titlePage?: TitlePageData
+  titlePage?: TitlePageData,
+  config?: { watermark?: WatermarkConfig, revision?: RevisionConfig }
 ): Promise<void> {
   console.log('[pdfExport] downloadPDF called with', elements.length, 'elements');
   
@@ -184,7 +309,7 @@ export async function downloadPDF(
   }
   
   try {
-    const doc = generatePDF(elements, titlePage);
+    const doc = generatePDF(elements, titlePage, config?.watermark, config?.revision);
     console.log('[pdfExport] PDF generated successfully');
     
     // Check if running in Tauri

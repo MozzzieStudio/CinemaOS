@@ -5,7 +5,7 @@
  * We support round-trip editing.
  */
 
-import { LexicalEditor, $getRoot, $createTextNode, SerializedLexicalNode } from 'lexical';
+import { LexicalEditor, $getRoot, $createTextNode, SerializedLexicalNode, ParagraphNode } from 'lexical';
 import {
   $createSceneHeadingNode,
   $createActionNode,
@@ -15,8 +15,8 @@ import {
   $createTransitionNode,
 } from '../components/editor/nodes/ScriptNodes';
 
-// FDX Element type mapping
-const FDX_ELEMENT_MAP: Record<string, () => ReturnType<typeof $createSceneHeadingNode>> = {
+// FDX Element type mapping - use ParagraphNode as base since all nodes extend it
+const FDX_ELEMENT_MAP: Record<string, () => ParagraphNode> = {
   'Scene Heading': $createSceneHeadingNode,
   'Action': $createActionNode,
   'Character': $createCharacterNode,

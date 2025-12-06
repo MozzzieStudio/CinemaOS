@@ -16,6 +16,7 @@ import {
   $isRangeSelection,
   COMMAND_PRIORITY_HIGH,
   KEY_DOWN_COMMAND,
+  ParagraphNode,
 } from "lexical";
 import { useEffect } from "react";
 import {
@@ -28,7 +29,8 @@ import {
 
 type FormatKey = '1' | '2' | '3' | '4' | '5' | '6';
 
-const FORMAT_MAP: Record<FormatKey, () => ReturnType<typeof $createSceneHeadingNode>> = {
+// Use ParagraphNode as base type since all script nodes extend it
+const FORMAT_MAP: Record<FormatKey, () => ParagraphNode> = {
   '1': $createSceneHeadingNode,
   '2': $createActionNode,
   '3': $createCharacterNode,

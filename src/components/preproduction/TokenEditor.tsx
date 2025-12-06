@@ -39,6 +39,7 @@ export default function TokenEditor({
   const [name, setName] = useState(token?.name || '');
   const [description, setDescription] = useState(token?.description || '');
   const [metadata, setMetadata] = useState<Record<string, string>>(token?.metadata || {});
+  const [visualRefs, setVisualRefs] = useState<string[]>(token?.visual_refs || []);
   const [isGenerating, setIsGenerating] = useState(false);
 
   const handleSave = () => {
@@ -53,7 +54,7 @@ export default function TokenEditor({
       name,
       slug,
       description,
-      visual_refs: token?.visual_refs || [],
+      visual_refs: visualRefs,
       lora_id: token?.lora_id,
       voice_id: token?.voice_id,
       metadata,
@@ -66,8 +67,13 @@ export default function TokenEditor({
 
   const handleGenerateVisual = () => {
     setIsGenerating(true);
-    onGenerateVisual?.();
-    setTimeout(() => setIsGenerating(false), 2000);
+    // Mock AI Generation delay
+    setTimeout(() => {
+      const mockImage = `https://placehold.co/1024x576/1a1a1a/FFF?text=${encodeURIComponent(name || tokenType)}`;
+      setVisualRefs(prev => [mockImage, ...prev]);
+      setIsGenerating(false);
+      onGenerateVisual?.(); // Optional callback
+    }, 2000);
   };
 
   // Metadata fields based on token type

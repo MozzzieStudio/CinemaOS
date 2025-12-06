@@ -10,7 +10,7 @@ import {
   $getSelection, 
   $isRangeSelection, 
   TextNode,
-  COMMAND_PRIORITY_LOW,
+  COMMAND_PRIORITY_HIGH,
   KEY_ARROW_DOWN_COMMAND,
   KEY_ARROW_UP_COMMAND,
   KEY_ENTER_COMMAND,
@@ -263,7 +263,7 @@ export default function SmartTypePlugin({ config }: SmartTypePluginProps) {
           setSelectedIndex(prev => (prev + 1) % suggestions.length);
           return true;
         },
-        COMMAND_PRIORITY_LOW
+        COMMAND_PRIORITY_HIGH
       ),
       editor.registerCommand(
         KEY_ARROW_UP_COMMAND,
@@ -272,7 +272,7 @@ export default function SmartTypePlugin({ config }: SmartTypePluginProps) {
           setSelectedIndex(prev => prev <= 0 ? suggestions.length - 1 : prev - 1);
           return true;
         },
-        COMMAND_PRIORITY_LOW
+        COMMAND_PRIORITY_HIGH
       ),
       editor.registerCommand(
         KEY_ENTER_COMMAND,
@@ -281,7 +281,7 @@ export default function SmartTypePlugin({ config }: SmartTypePluginProps) {
           applySuggestion(suggestions[selectedIndex]);
           return true;
         },
-        COMMAND_PRIORITY_LOW
+        COMMAND_PRIORITY_HIGH
       ),
       editor.registerCommand(
         KEY_TAB_COMMAND,
@@ -290,7 +290,7 @@ export default function SmartTypePlugin({ config }: SmartTypePluginProps) {
           applySuggestion(suggestions[selectedIndex]);
           return true;
         },
-        COMMAND_PRIORITY_LOW
+        COMMAND_PRIORITY_HIGH
       ),
       editor.registerCommand(
         KEY_ESCAPE_COMMAND,
@@ -299,7 +299,7 @@ export default function SmartTypePlugin({ config }: SmartTypePluginProps) {
           setSuggestions([]);
           return true;
         },
-        COMMAND_PRIORITY_LOW
+        COMMAND_PRIORITY_HIGH
       ),
     ];
 

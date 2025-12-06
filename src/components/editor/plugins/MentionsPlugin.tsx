@@ -65,29 +65,56 @@ export default function MentionsPlugin({ projectId }: { projectId: string }) {
   const [characters, setCharacters] = useState<MentionOption[]>([]);
 
   useEffect(() => {
-    // Fetch characters from Vault
-    async function fetchCharacters() {
+    // Fetch tokens from Vault for @ mentions
+    async function fetchVaultTokens() {
       try {
-        // Mock data for now if backend is empty or failing
-        // const chars = await invoke("get_characters", { projectId });
-        // For demo purposes, let's use a static list + backend fetch attempt
+        // Try to fetch from Vault
+        const isTauri = typeof window !== 'undefined' && '__TAURI__' in window;
+        
+        if (isTauri) {
+          const { invoke } = await import('@tauri-apps/api/core');
+          const tokens: any[] = await invoke('get_tokens', { projectId });
+          
+          // Convert tokens to mention options (Characters and Locations)
+          const options = tokens
+            .filter(t => t.token_type === 'Character' || t.token_type === 'Location')
+            .map(t => new MentionOption(
+              t.token_type === 'Character' ? `@${t.name}` : `/${t.name}`,
+              t.id
+            ));
+          
+          if (options.length > 0) {
+            setCharacters(options);
+            console.log('[Mentions] Loaded', options.length, 'tokens from Vault');
+            return;
+          }
+        }
+        
+        // Fallback to mock data for demo
         const mockChars = [
-          new MentionOption("Anna", "char:anna"),
-          new MentionOption("David", "char:david"),
-          new MentionOption("Sarah", "char:sarah"),
+          new MentionOption("@JOHN", "char:john"),
+          new MentionOption("@SARAH", "char:sarah"),
+          new MentionOption("@DAVID", "char:david"),
+          new MentionOption("/OFFICE", "loc:office"),
+          new MentionOption("/PARK", "loc:park"),
         ];
         setCharacters(mockChars);
-        
-        // Real fetch (uncomment when data exists)
-        // const realChars: any[] = await invoke("get_characters", { projectId });
-        // if (realChars && realChars.length > 0) {
-        //   setCharacters(realChars.map((c) => new MentionOption(c.name, c.id.id.String)));
-        // }
       } catch (e) {
-        console.error("Failed to fetch characters", e);
+        console.warn("[Mentions] Failed to fetch tokens, using fallback:", e);
+        // Fallback mock
+        setCharacters([
+          new MentionOption("@JOHN", "char:john"),
+          new MentionOption("@SARAH", "char:sarah"),
+        ]);
       }
     }
-    fetchCharacters();
+    
+    fetchVaultTokens();
+    
+    // Listen for token changes
+    const handleTokenUpdate = () => fetchVaultTokens();
+    window.addEventListener('vault-tokens-updated', handleTokenUpdate);
+    return () => window.removeEventListener('vault-tokens-updated', handleTokenUpdate);
   }, [projectId]);
 
   // Also support '@'

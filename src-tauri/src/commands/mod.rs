@@ -3,6 +3,7 @@
 //! Exports all Tauri commands for use in lib.rs
 
 pub mod ai;
+pub mod comfyui;
 pub mod files;
 pub mod tokens;
 

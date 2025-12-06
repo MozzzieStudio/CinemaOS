@@ -5,19 +5,25 @@
  * - Glassmorphism sidebar
  * - Animated token cards
  * - Extract Vault with AI
+ * - Search & Filter
+ * - Statistics Panel
+ * - Keyboard shortcuts
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { TokenType, Token, getTokenIcon } from '../../types/tokens';
 import TokenCard from './TokenCard';
 import TokenEditor from './TokenEditor';
-import { invoke } from "@tauri-apps/api/core";
+import { safeInvoke } from '../../utils/tauriMock';
+import { toast } from 'sonner';
+import { downloadVisualBible } from '../../lib/visualBibleExport';
 
 interface PreProductionLayoutProps {
   projectId: string;
 }
 
 type ViewMode = 'grid' | 'list';
+type SortOption = 'name' | 'date' | 'hasVisual';
 
 const TABS: { type: TokenType; label: string; color: string }[] = [
   { type: 'Character', label: 'Characters', color: 'purple' },
@@ -34,15 +40,21 @@ export default function PreProductionLayout({ projectId }: PreProductionLayoutPr
   const [isCreating, setIsCreating] = useState(false);
   const [isExtracting, setIsExtracting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // New state for search/sort
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<SortOption>('name');
 
   // Fetch tokens on mount
   useEffect(() => {
     async function fetchTokens() {
       try {
-        const result = await invoke<Token[]>('get_tokens', { projectId });
+        const result = await safeInvoke<Token[]>('get_tokens', { projectId });
         setTokens(result);
+        toast.success(`Loaded ${result.length} tokens`);
       } catch (e) {
         console.error('Failed to fetch tokens:', e);
+        toast.error('Failed to load tokens');
       } finally {
         setIsLoading(false);
       }
@@ -50,13 +62,83 @@ export default function PreProductionLayout({ projectId }: PreProductionLayoutPr
     fetchTokens();
   }, [projectId]);
 
-  const filteredTokens = tokens.filter(t => t.token_type === activeTab);
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl+N: New token
+      if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+        e.preventDefault();
+        setIsCreating(true);
+      }
+      // Ctrl+E: Extract from script
+      if ((e.ctrlKey || e.metaKey) && e.key === 'e') {
+        e.preventDefault();
+        handleExtractVault();
+      }
+      // Escape: Close modal
+      if (e.key === 'Escape') {
+        setSelectedToken(null);
+        setIsCreating(false);
+      }
+      // Ctrl+F: Focus search
+      if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+        e.preventDefault();
+        document.getElementById('vault-search')?.focus();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  // Filtered and sorted tokens
+  const filteredTokens = useMemo(() => {
+    let result = tokens.filter(t => t.token_type === activeTab);
+    
+    // Search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(t => 
+        t.name.toLowerCase().includes(query) ||
+        t.description.toLowerCase().includes(query)
+      );
+    }
+    
+    // Sort
+    result.sort((a, b) => {
+      switch (sortBy) {
+        case 'name':
+          return a.name.localeCompare(b.name);
+        case 'date':
+          return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+        case 'hasVisual':
+          return (b.visual_refs.length > 0 ? 1 : 0) - (a.visual_refs.length > 0 ? 1 : 0);
+        default:
+          return 0;
+      }
+    });
+    
+    return result;
+  }, [tokens, activeTab, searchQuery, sortBy]);
+
+  // Statistics
+  const stats = useMemo(() => {
+    const byType = TABS.map(tab => ({
+      type: tab.type,
+      count: tokens.filter(t => t.token_type === tab.type).length,
+      withVisual: tokens.filter(t => t.token_type === tab.type && t.visual_refs.length > 0).length,
+    }));
+    const total = tokens.length;
+    const withVisuals = tokens.filter(t => t.visual_refs.length > 0).length;
+    const withLora = tokens.filter(t => t.lora_id).length;
+    return { byType, total, withVisuals, withLora };
+  }, [tokens]);
+
   const activeTabInfo = TABS.find(t => t.type === activeTab)!;
 
   // Handlers
   const handleCreateToken = async (token: Token) => {
     try {
-      const created = await invoke<Token>('create_token', {
+      const created = await safeInvoke<Token>('create_token', {
         projectId,
         tokenType: token.token_type,
         name: token.name,
@@ -64,61 +146,160 @@ export default function PreProductionLayout({ projectId }: PreProductionLayoutPr
       });
       setTokens([...tokens, created]);
       setIsCreating(false);
+      toast.success(`Created ${token.token_type}: ${token.name}`);
     } catch (e) {
       console.error('Failed to create token:', e);
+      toast.error('Failed to create token');
     }
   };
 
   const handleUpdateToken = async (token: Token) => {
     try {
-      const updated = await invoke<Token>('update_token', { token });
+      const updated = await safeInvoke<Token>('update_token', { token });
       setTokens(tokens.map(t => t.id === updated.id ? updated : t));
       setSelectedToken(null);
+      toast.success(`Updated ${token.name}`);
     } catch (e) {
       console.error('Failed to update token:', e);
+      toast.error('Failed to update token');
     }
   };
 
   const handleDeleteToken = async (tokenId: string) => {
     try {
-      await invoke('delete_token', { tokenId });
+      await safeInvoke('delete_token', { tokenId });
       setTokens(tokens.filter(t => t.id !== tokenId));
       setSelectedToken(null);
+      toast.success('Token deleted');
     } catch (e) {
       console.error('Failed to delete token:', e);
+      toast.error('Failed to delete token');
     }
   };
 
-  const handleGenerateVisual = async (tokenId: string) => {
-    // TODO: Connect to ComfyUI
-    console.log('Generate visual for:', tokenId);
-  };
+  const handleGenerateVisual = useCallback(async (tokenId: string) => {
+    const token = tokens.find(t => t.id === tokenId);
+    if (!token) return;
 
-  const handleExtractVault = async () => {
+    toast.loading(`Generating visual for ${token.name}...`, { id: tokenId });
+
+    try {
+      const mockImage = `https://placehold.co/1024x576/1a1a1a/FFF?text=${encodeURIComponent(token.name)}`;
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      const updated = await safeInvoke<Token>('add_token_visual', { 
+        tokenId, 
+        visualUrl: mockImage 
+      });
+
+      setTokens(tokens.map(t => t.id === tokenId ? updated : t));
+      toast.success(`Visual generated for ${token.name}`, { id: tokenId });
+    } catch (e) {
+      console.error('Failed to generate visual:', e);
+      toast.error(`Failed to generate visual`, { id: tokenId });
+    }
+  }, [tokens]);
+
+  const handleExtractVault = useCallback(async () => {
     setIsExtracting(true);
-    // TODO: Get script content and call AI extraction
-    setTimeout(() => setIsExtracting(false), 2000);
-  };
+    toast.loading('Extracting entities from script...', { id: 'extract' });
+    
+    try {
+      const script = await safeInvoke<any>('load_script', { projectId });
+      if (!script || !script.content) {
+        toast.warning("No script content found. Write something first!", { id: 'extract' });
+        setIsExtracting(false);
+        return;
+      }
+
+      let scriptText = '';
+      try {
+          const json = JSON.parse(script.content);
+          const traverse = (node: any) => {
+            if (node.text) scriptText += node.text;
+            if (['scene-heading', 'action', 'character', 'dialogue', 'transition'].includes(node.type)) {
+              scriptText += '\n';
+            }
+            if (node.children && Array.isArray(node.children)) {
+              node.children.forEach(traverse);
+            }
+            if (node.type === 'linebreak') scriptText += '\n';
+          };
+          if (json.root) traverse(json.root);
+      } catch {
+          scriptText = script.content;
+      }
+
+      const extracted = await safeInvoke<any>('extract_tokens_from_script', {
+        projectId,
+        scriptContent: scriptText
+      });
+
+      const saved = await safeInvoke<Token[]>('save_extracted_tokens', {
+        projectId,
+        extracted
+      });
+
+      if (saved.length > 0) {
+        const currentIds = new Set(tokens.map(t => t.id));
+        const newTokens = saved.filter(t => !currentIds.has(t.id));
+        setTokens(prev => [...prev, ...newTokens]);
+        toast.success(`Extracted ${saved.length} entities!`, { id: 'extract' });
+      } else {
+        toast.info('No new entities found', { id: 'extract' });
+      }
+    } catch (e) {
+      console.error("Extraction failed:", e);
+      toast.error('Extraction failed', { id: 'extract' });
+    } finally {
+      setIsExtracting(false);
+    }
+  }, [projectId, tokens]);
 
   return (
-    <div className="flex h-full bg-[var(--color-bg-primary)]">
+    <div className="flex h-full bg-[#0a0a0a]">
       {/* Sidebar */}
-      <aside className="w-56 border-r border-[var(--color-border)] flex flex-col glass-strong">
+      <aside className="w-64 border-r border-white/10 flex flex-col bg-[#0f0f0f]">
         {/* Header */}
-        <div className="p-4 border-b border-[var(--color-border)]">
-          <h2 className="text-sm font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider flex items-center gap-2">
+        <div className="p-4 border-b border-white/10">
+          <h2 className="text-sm font-semibold text-white/60 uppercase tracking-wider flex items-center gap-2">
             <span className="text-lg">📚</span>
             Visual Bible
           </h2>
-          <p className="text-xs text-[var(--color-text-muted)] mt-1">
-            {tokens.length} tokens in vault
+          <p className="text-xs text-white/40 mt-1">
+            {stats.total} tokens • {stats.withVisuals} with visuals
           </p>
+        </div>
+        
+        {/* Stats Panel */}
+        <div className="p-3 border-b border-white/10 space-y-2">
+          <div className="text-[10px] text-white/40 uppercase tracking-wider mb-2">Statistics</div>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="bg-white/5 rounded-lg p-2 text-center">
+              <div className="text-lg font-bold text-white">{stats.total}</div>
+              <div className="text-[10px] text-white/40">Total</div>
+            </div>
+            <div className="bg-white/5 rounded-lg p-2 text-center">
+              <div className="text-lg font-bold text-emerald-400">{stats.withVisuals}</div>
+              <div className="text-[10px] text-white/40">Visualized</div>
+            </div>
+            <div className="bg-white/5 rounded-lg p-2 text-center">
+              <div className="text-lg font-bold text-purple-400">{stats.withLora}</div>
+              <div className="text-[10px] text-white/40">LoRA Ready</div>
+            </div>
+            <div className="bg-white/5 rounded-lg p-2 text-center">
+              <div className="text-lg font-bold text-blue-400">
+                {stats.total > 0 ? Math.round((stats.withVisuals / stats.total) * 100) : 0}%
+              </div>
+              <div className="text-[10px] text-white/40">Coverage</div>
+            </div>
+          </div>
         </div>
         
         {/* Tab Navigation */}
         <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
           {TABS.map(tab => {
-            const count = tokens.filter(t => t.token_type === tab.type).length;
+            const tabStats = stats.byType.find(s => s.type === tab.type);
             const isActive = activeTab === tab.type;
             
             return (
@@ -127,36 +308,30 @@ export default function PreProductionLayout({ projectId }: PreProductionLayoutPr
                 onClick={() => setActiveTab(tab.type)}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
                   isActive
-                    ? `bg-${tab.color}-500/20 text-${tab.color}-400 border border-${tab.color}-500/30`
-                    : 'text-[var(--color-text-secondary)] hover:bg-white/5 hover:text-white'
+                    ? 'bg-white/10 text-white border border-white/20'
+                    : 'text-white/50 hover:bg-white/5 hover:text-white'
                 }`}
-                style={isActive ? {
-                  background: `rgba(var(--${tab.color}-rgb, 139, 92, 246), 0.15)`,
-                  borderColor: `rgba(var(--${tab.color}-rgb, 139, 92, 246), 0.3)`,
-                } : {}}
               >
                 <span className="text-lg">{getTokenIcon(tab.type)}</span>
                 <span className="flex-1 text-left">{tab.label}</span>
-                {count > 0 && (
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-white/10">
-                    {count}
-                  </span>
-                )}
+                <span className="text-xs px-2 py-0.5 rounded-full bg-white/10">
+                  {tabStats?.count || 0}
+                </span>
               </button>
             );
           })}
         </nav>
 
         {/* Actions */}
-        <div className="p-3 border-t border-[var(--color-border)] space-y-2">
+        <div className="p-3 border-t border-white/10 space-y-2">
           <button
             onClick={handleExtractVault}
             disabled={isExtracting}
-            className="w-full btn-primary justify-center"
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-gradient-to-r from-violet-600 to-purple-600 text-white font-medium text-sm hover:from-violet-500 hover:to-purple-500 transition-all disabled:opacity-50"
           >
             {isExtracting ? (
               <>
-                <div className="spinner w-4 h-4"></div>
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                 Extracting...
               </>
             ) : (
@@ -170,35 +345,88 @@ export default function PreProductionLayout({ projectId }: PreProductionLayoutPr
           </button>
           <button
             onClick={() => setIsCreating(true)}
-            className="w-full btn-secondary justify-center"
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-white/5 border border-white/10 text-white/80 font-medium text-sm hover:bg-white/10 hover:text-white transition-all"
           >
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
             </svg>
             Add {activeTab}
           </button>
+          <button
+            onClick={async () => {
+              const toastId = 'export-bible';
+              toast.loading('Generating Visual Bible PDF...', { id: toastId });
+              try {
+                await downloadVisualBible(tokens);
+                toast.success('Visual Bible exported!', { id: toastId });
+              } catch (e) {
+                console.error('Export failed:', e);
+                toast.error('Export failed', { id: toastId });
+              }
+            }}
+            disabled={tokens.length === 0}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-emerald-600/20 border border-emerald-500/30 text-emerald-400 font-medium text-sm hover:bg-emerald-600/30 transition-all disabled:opacity-40"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+            </svg>
+            Export Bible
+          </button>
+        </div>
+        
+        {/* Keyboard Hints */}
+        <div className="p-3 border-t border-white/10 text-[10px] text-white/30 space-y-1">
+          <div><kbd className="px-1 py-0.5 bg-white/10 rounded">Ctrl+N</kbd> New token</div>
+          <div><kbd className="px-1 py-0.5 bg-white/10 rounded">Ctrl+E</kbd> Extract</div>
+          <div><kbd className="px-1 py-0.5 bg-white/10 rounded">Ctrl+F</kbd> Search</div>
         </div>
       </aside>
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <header className="p-4 border-b border-[var(--color-border)] flex items-center justify-between bg-[var(--color-bg-secondary)]">
+        <header className="p-4 border-b border-white/10 flex items-center justify-between bg-[#0c0c0c]">
           <div className="flex items-center gap-3">
             <span className="text-2xl">{getTokenIcon(activeTab)}</span>
             <div>
-              <h1 className="text-lg font-semibold text-[var(--color-text-primary)]">
+              <h1 className="text-lg font-semibold text-white">
                 {activeTabInfo.label}
               </h1>
-              <p className="text-xs text-[var(--color-text-muted)]">
-                {filteredTokens.length} {activeTab.toLowerCase()}s in this project
+              <p className="text-xs text-white/40">
+                {filteredTokens.length} {activeTab.toLowerCase()}s{searchQuery && ` matching "${searchQuery}"`}
               </p>
             </div>
           </div>
           
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            {/* Search */}
+            <div className="relative">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-white/40">
+                <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+              </svg>
+              <input
+                id="vault-search"
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search tokens..."
+                className="w-48 pl-9 pr-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder-white/30 focus:outline-none focus:border-white/20"
+              />
+            </div>
+            
+            {/* Sort */}
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as SortOption)}
+              className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white focus:outline-none"
+            >
+              <option value="name">Sort by Name</option>
+              <option value="date">Sort by Date</option>
+              <option value="hasVisual">Sort by Visual</option>
+            </select>
+            
             {/* View Toggle */}
-            <div className="flex bg-[var(--color-bg-primary)] rounded-lg p-1 border border-[var(--color-border)]">
+            <div className="flex bg-white/5 rounded-lg p-1 border border-white/10">
               <button
                 onClick={() => setViewMode('grid')}
                 className={`p-2 rounded-md transition-all ${
@@ -234,34 +462,39 @@ export default function PreProductionLayout({ projectId }: PreProductionLayoutPr
               {[1, 2, 3, 4, 5, 6].map(i => (
                 <div key={i} className={`animate-pulse ${
                   viewMode === 'grid' 
-                    ? 'aspect-square rounded-lg skeleton' 
-                    : 'h-16 rounded-lg skeleton'
+                    ? 'aspect-square rounded-lg bg-white/5' 
+                    : 'h-16 rounded-lg bg-white/5'
                 }`} />
               ))}
             </div>
           ) : filteredTokens.length === 0 ? (
             // Empty State
-            <div className="flex flex-col items-center justify-center h-full text-center animate-fade-in">
-              <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center mb-4">
-                <span className="text-4xl">{getTokenIcon(activeTab)}</span>
+            <div className="flex flex-col items-center justify-center h-full text-center">
+              <div className="w-24 h-24 rounded-full bg-white/5 flex items-center justify-center mb-6">
+                <span className="text-5xl opacity-50">{getTokenIcon(activeTab)}</span>
               </div>
-              <h3 className="text-lg font-medium text-[var(--color-text-primary)] mb-2">
-                No {activeTab.toLowerCase()}s yet
+              <h3 className="text-xl font-semibold text-white mb-2">
+                {searchQuery ? 'No results found' : `No ${activeTab.toLowerCase()}s yet`}
               </h3>
-              <p className="text-sm text-[var(--color-text-muted)] max-w-xs mb-6">
-                Add {activeTab.toLowerCase()}s manually or extract them from your script using AI.
+              <p className="text-sm text-white/40 max-w-sm mb-6">
+                {searchQuery 
+                  ? `No tokens matching "${searchQuery}"` 
+                  : `Add ${activeTab.toLowerCase()}s manually or extract them from your script using AI.`
+                }
               </p>
-              <div className="flex gap-3">
-                <button onClick={handleExtractVault} className="btn-primary">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
-                  </svg>
-                  Extract from Script
-                </button>
-                <button onClick={() => setIsCreating(true)} className="btn-secondary">
-                  Add Manually
-                </button>
-              </div>
+              {!searchQuery && (
+                <div className="flex gap-3">
+                  <button onClick={handleExtractVault} className="px-4 py-2 bg-violet-600 hover:bg-violet-500 rounded-lg text-white text-sm font-medium flex items-center gap-2 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
+                    </svg>
+                    Extract from Script
+                  </button>
+                  <button onClick={() => setIsCreating(true)} className="px-4 py-2 bg-white/10 hover:bg-white/15 rounded-lg text-white text-sm font-medium transition-colors">
+                    Add Manually
+                  </button>
+                </div>
+              )}
             </div>
           ) : (
             // Token Grid
@@ -272,8 +505,8 @@ export default function PreProductionLayout({ projectId }: PreProductionLayoutPr
               {filteredTokens.map((token, index) => (
                 <div 
                   key={token.id} 
-                  className="animate-fade-in-up"
-                  style={{ animationDelay: `${index * 50}ms` }}
+                  className="animate-fade-in"
+                  style={{ animationDelay: `${index * 30}ms` }}
                 >
                   <TokenCard
                     token={token}
@@ -290,20 +523,18 @@ export default function PreProductionLayout({ projectId }: PreProductionLayoutPr
 
       {/* Token Editor Modal */}
       {(selectedToken || isCreating) && (
-        <div className="animate-fade-in">
-          <TokenEditor
-            token={selectedToken}
-            tokenType={activeTab}
-            projectId={projectId}
-            onSave={selectedToken ? handleUpdateToken : handleCreateToken}
-            onDelete={selectedToken?.id ? () => handleDeleteToken(selectedToken.id!) : undefined}
-            onClose={() => {
-              setSelectedToken(null);
-              setIsCreating(false);
-            }}
-            onGenerateVisual={selectedToken?.id ? () => handleGenerateVisual(selectedToken.id!) : undefined}
-          />
-        </div>
+        <TokenEditor
+          token={selectedToken}
+          tokenType={activeTab}
+          projectId={projectId}
+          onSave={selectedToken ? handleUpdateToken : handleCreateToken}
+          onDelete={selectedToken?.id ? () => handleDeleteToken(selectedToken.id!) : undefined}
+          onClose={() => {
+            setSelectedToken(null);
+            setIsCreating(false);
+          }}
+          onGenerateVisual={selectedToken?.id ? () => handleGenerateVisual(selectedToken.id!) : undefined}
+        />
       )}
     </div>
   );

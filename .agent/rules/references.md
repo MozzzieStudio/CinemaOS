@@ -4,9 +4,7 @@ trigger: always_on
 
 # Project: References & Knowledge Base
 
-This file contains a comprehensive list of external resources, competitors, tech stack documentation, and model references.
-
-## 1. Competencia (Competitors & Inspiration)
+## 1. Competitors & Inspiration
 
 ### Final Draft
 
@@ -192,7 +190,6 @@ This file contains a comprehensive list of external resources, competitors, tech
 ### xAI
 
 - [Home](https://x.ai/)
-- [Grok](https://x.ai/grok)
 - [API](https://x.ai/api)
 - [Docs](https://docs.x.ai/docs/overview)
 - [Models](https://docs.x.ai/docs/models)
@@ -225,11 +222,65 @@ This file contains a comprehensive list of external resources, competitors, tech
 - [Wan 2.5](https://modelstudio.console.alibabacloud.com/?tab=doc#/doc/?type=model&url=2840914_2&modelId=wan2.5-i2v-preview)
 - [Qwen HuggingFace](https://huggingface.co/Qwen)
 - [Wan-AI HuggingFace](https://huggingface.co/Wan-AI)
-- [Kling AI](https://klingai.com/global/dev)
-- [Kling API](https://app.klingai.com/global/dev/document-api/quickStart/productIntroduction/overview)
-- [Kling Pricing](https://klingai.com/global/dev/pricing)
 - [ByteDance Seed](https://seed.bytedance.com/en/)
 - [Tongyi Z-Image](https://huggingface.co/Tongyi-MAI/Z-Image-Turbo)
+
+### Kling AI (Kuaishou)
+
+- [Kling AI Home](https://klingai.com)
+- [Kling API Docs](https://klingai.com/global/dev)
+- [Kling API Pricing](https://klingai.com/global/dev/pricing)
+
+**Kling O1 (Omni One):**
+
+- Primer modelo multimodal unificado (text + image + video input)
+- Edicion via lenguaje natural: inpainting, outpainting, Multi-Elements mode
+- Control de director: swap, add, delete elementos con texto
+- Consistencia de personajes y props entre tomas
+- Videos hasta 2 minutos, 1080p @ 30fps
+
+**Kling Video 2.6:**
+
+- Genera video + audio (dialogo, SFX, ambiente) en un solo paso
+- Idiomas: Chino e Ingles nativos
+- Soporte para canto, rap, narracion, multi-personajes
+
+**Kling Image O1:**
+
+- Arquitectura Kolors 2.1, output 4K
+- Hasta 10 imagenes de referencia simultaneas
+
+**Kling Avatar 2.0:**
+
+- Avatares hiper-realistas desde una foto
+- Lip-sync preciso, hasta 5 minutos de contenido, HD/4K
+
+**Element Library:**
+
+- Referencias multi-angulo para consistencia
+
+**VFX House:**
+
+- [InVideo VFX House](https://invideo.io)
+- One-Click VFX: relight, AI colourist, prop swap, key lab, re-frame
+- 3D Texturizer, refraction, shot kitchen, inpaint & cleanup
+- Virtual production, continuity engine
+
+**API Providers:**
+
+- [Fal.ai Kling](https://fal.ai) - 0.112 USD/seg (Image-to-Video)
+- [CometAPI Kling](https://cometapi.com) - Precios reducidos
+- [PiAPI Kling](https://piapi.ai) - Flexible pricing
+- [WaveSpeed Kling](https://wavespeed.ai) - 0.028 USD/imagen (Image O1)
+
+### HuggingFace
+
+- [HuggingFace Hub](https://huggingface.co)
+- [HuggingFace Blog](https://huggingface.co/blog)
+- [Transformers v5](https://huggingface.co/blog/transformers-v5)
+- [smolagents](https://huggingface.co/blog/smolagents)
+- [swift-huggingface](https://huggingface.co/blog/swift-huggingface)
+- [Diffusers FLUX-2](https://huggingface.co/blog/flux-2)
 
 ### Black Forest Labs (Flux)
 

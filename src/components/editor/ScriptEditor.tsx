@@ -64,6 +64,8 @@ import CharacterHighlightPlugin, { OPEN_CHARACTER_SELECTOR_COMMAND } from './plu
 import BreakdownPlugin, { OPEN_BREAKDOWN_REPORT_COMMAND } from './plugins/BreakdownPlugin';
 import ScriptCompareDialog from './ScriptCompareDialog';
 import FocusModePlugin from "./plugins/FocusModePlugin";
+import AlternativeDialoguePlugin, { ADD_ALT_DIALOGUE_COMMAND, CYCLE_ALT_DIALOGUE_COMMAND } from "./plugins/AlternativeDialoguePlugin";
+import AlternativeDialogueDialog from "./AlternativeDialogueDialog";
 import PreferencesDialog, { usePreferences } from "../PreferencesDialog";
 import { calculatePagination, extractElementsFromRoot } from "../../lib/pagination";
 
@@ -263,6 +265,8 @@ function EditorContent(props: any) {
   const [isSceneLockPanelOpen, setIsSceneLockPanelOpen] = useState(false);
   const [isSpeakingModeOpen, setIsSpeakingModeOpen] = useState(false);
   const [isVersionHistoryOpen, setIsVersionHistoryOpen] = useState(false);
+  const [isAltDialogueOpen, setIsAltDialogueOpen] = useState(false);
+  const [altDialogueData, setAltDialogueData] = useState<{nodeKey: string | null, currentText: string}>({ nodeKey: null, currentText: '' });
   
   // Title page data
   const [titlePageData, setTitlePageData] = useState({
@@ -302,8 +306,19 @@ function EditorContent(props: any) {
       const { elementKey } = e.detail;
       setNotePopoverElementKey(elementKey);
     };
+    
+    const handleAltDialoguePrompt = (e: CustomEvent) => {
+      const { nodeKey, currentText } = e.detail;
+      setAltDialogueData({ nodeKey, currentText });
+      setIsAltDialogueOpen(true);
+    };
+
     window.addEventListener('open-note-popover', handleNotePopover as EventListener);
-    return () => window.removeEventListener('open-note-popover', handleNotePopover as EventListener);
+    window.addEventListener('open-alt-dialogue-prompt', handleAltDialoguePrompt as EventListener);
+    return () => {
+      window.removeEventListener('open-note-popover', handleNotePopover as EventListener);
+      window.removeEventListener('open-alt-dialogue-prompt', handleAltDialoguePrompt as EventListener);
+    };
   }, []);
 
   useEffect(() => {
@@ -315,6 +330,9 @@ function EditorContent(props: any) {
       else if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'b') { e.preventDefault(); setIsBookmarksOpen(prev => !prev); }
       else if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); editor.dispatchCommand(INSERT_PAGE_BREAK_COMMAND, undefined); }
       else if ((e.ctrlKey || e.metaKey) && e.key === 'd') { e.preventDefault(); editor.dispatchCommand(TOGGLE_DUAL_DIALOGUE_COMMAND, undefined); }
+      // Alts Shortcuts
+      else if ((e.ctrlKey || e.metaKey) && e.altKey && e.key === 'n') { e.preventDefault(); editor.dispatchCommand(ADD_ALT_DIALOGUE_COMMAND, undefined); }
+      else if ((e.ctrlKey || e.metaKey) && e.altKey && e.key === 'm') { e.preventDefault(); editor.dispatchCommand(CYCLE_ALT_DIALOGUE_COMMAND, undefined); }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
@@ -475,6 +493,7 @@ function EditorContent(props: any) {
       <SceneNumbersPlugin config={sceneNumbersConfig} />
       <MoresContinuedsPlugin config={moresContinuedsConfig} pageHeight={54} />
       <ScriptContextPlugin onContextChange={props.onScriptContextChange} />
+      <AlternativeDialoguePlugin />
 
       {/* MODALS */}
       <BeatBoard isOpen={isBeatBoardOpen} onClose={() => setIsBeatBoardOpen(false)} />
@@ -510,6 +529,12 @@ function EditorContent(props: any) {
           onClose={() => setIsVersionHistoryOpen(false)}
         />
       )}
+      <AlternativeDialogueDialog 
+        isOpen={isAltDialogueOpen} 
+        onClose={() => setIsAltDialogueOpen(false)} 
+        nodeKey={altDialogueData.nodeKey}
+        currentText={altDialogueData.currentText}
+      />
     </div>
   );
 }

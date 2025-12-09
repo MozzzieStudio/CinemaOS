@@ -13,6 +13,21 @@ export const TOKEN_PREFIXES: Record<TokenType, string> = {
   Set: '🎭',
 };
 
+// Temporal State: Properties that change over time (e.g. appearance, mood)
+export interface TemporalState {
+  id: string;
+  token_id: string;
+  scope_type: 'scene' | 'act' | 'global';
+  scope_range: string[]; // ['1', '5'] for Scenes 1-5, or ['1'] for Act 1
+  changes: {
+    appearance?: string;
+    mood?: string;
+    description?: string;
+    // Dynamic properties
+    [key: string]: string | undefined;
+  };
+}
+
 export interface Token {
   id?: string;
   project_id: string;
@@ -22,10 +37,14 @@ export interface Token {
   description: string;
   visual_refs: string[];
   lora_id?: string;
+  lora_training_status?: 'none' | 'pending' | 'training' | 'completed' | 'failed';
   voice_id?: string;
   metadata: Record<string, string>;
-  // Relationships to other tokens (optional for backwards compat)
+  
+  // Advanced Context
+  temporal_states?: TemporalState[];
   relationships?: TokenRelationship[];
+  
   // Scenes this token appears in (optional for backwards compat)
   scene_appearances?: string[];
   created_at: string;
@@ -34,7 +53,9 @@ export interface Token {
 
 export interface TokenRelationship {
   target_id: string;
-  relationship_type: 'appears_with' | 'belongs_to' | 'contains' | 'related_to';
+  relationship_type: 'appears_with' | 'belongs_to' | 'contains' | 'related_to' | 'loves' | 'hates' | 'rivals' | 'family' | 'custom';
+  custom_label?: string; // e.g. "Secretly Admires"
+  strength?: number; // 0.0 to 1.0 intensity
   notes?: string;
 }
 

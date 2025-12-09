@@ -205,19 +205,106 @@ export function $createCharacterNode(): CharacterNode {
 }
 
 // --- Dialogue ---
+export type SerializedDialogueNode = Spread<
+  {
+    alts: string[];
+    activeAltIndex: number;
+  },
+  SerializedParagraphNode
+>;
+
 export class DialogueNode extends ParagraphNode {
+  __alts: string[];
+  __activeAltIndex: number;
+
   static getType(): string {
     return "dialogue";
   }
 
   static clone(node: DialogueNode): DialogueNode {
-    return new DialogueNode(node.__key);
+    const clone = new DialogueNode(node.__key);
+    clone.__alts = [...node.__alts];
+    clone.__activeAltIndex = node.__activeAltIndex;
+    return clone;
+  }
+
+  constructor(key?: NodeKey) {
+    super(key);
+    this.__alts = [];
+    this.__activeAltIndex = -1;
   }
 
   createDOM(config: any): HTMLElement {
     const dom = super.createDOM(config);
     dom.classList.add("script-dialogue");
+    // Dataset for debugging/testing
+    if (this.__alts.length > 0) {
+      dom.dataset.hasAlts = "true";
+      dom.dataset.altCount = this.__alts.length.toString();
+    }
     return dom;
+  }
+
+  updateDOM(prevNode: DialogueNode, dom: HTMLElement): boolean {
+    if (prevNode.__alts.length !== this.__alts.length) {
+      if (this.__alts.length > 0) {
+        dom.dataset.hasAlts = "true";
+        dom.dataset.altCount = this.__alts.length.toString();
+      } else {
+        delete dom.dataset.hasAlts;
+        delete dom.dataset.altCount;
+      }
+    }
+    return false;
+  }
+
+  exportJSON(): SerializedDialogueNode {
+    return {
+      ...super.exportJSON(),
+      alts: this.__alts,
+      activeAltIndex: this.__activeAltIndex,
+      type: "dialogue",
+      version: 1,
+    };
+  }
+
+  static importJSON(serializedNode: SerializedDialogueNode): DialogueNode {
+    const node = $createDialogueNode();
+    node.__alts = serializedNode.alts || [];
+    node.__activeAltIndex = serializedNode.activeAltIndex || -1;
+    return node;
+  }
+
+  addAlt(text: string): void {
+    const self = this.getWritable();
+    // If we're adding an alt to a node that has none, store current text as first alt
+    if (self.__alts.length === 0) {
+      self.__alts.push(self.getTextContent());
+      self.__activeAltIndex = 0;
+    }
+    self.__alts.push(text);
+    // Switch to new alt
+    self.__activeAltIndex = self.__alts.length - 1;
+    // Update text content
+    // Note: This relies on the caller or a command to actually set the text of the node
+    // But ideally the node state update handles it. 
+    // Wait, Lexical's text content is separate from node data. 
+    // We'll handle the text update in the Command/Plugin, this just updates state.
+  }
+
+  getAlts(): string[] {
+    return this.__alts;
+  }
+
+  getActiveAltIndex(): number {
+    return this.__activeAltIndex;
+  }
+
+  setActiveAltIndex(index: number): void {
+    const self = this.getWritable();
+    if (index >= 0 && index < self.__alts.length) {
+      self.__activeAltIndex = index;
+    }
   }
 }
 

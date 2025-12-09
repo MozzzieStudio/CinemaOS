@@ -3,8 +3,16 @@ pub mod commands;
 pub mod errors;
 pub mod graphics;
 pub mod installer;
+pub mod pagination;
 pub mod sync;
 pub mod vault;
+
+use crate::pagination::{PaginationResult, ScriptElement};
+
+#[tauri::command]
+fn calculate_pagination(elements: Vec<ScriptElement>) -> PaginationResult {
+    pagination::paginate_script(elements)
+}
 
 #[cfg(test)]
 mod tests;
@@ -41,8 +49,10 @@ pub fn run() {
             commands::get_projects,
             commands::save_script,
             commands::load_script,
+            commands::load_script,
             commands::get_characters,
             commands::chat_with_agent,
+            calculate_pagination,
             // AI Model Matrix commands
             commands::ai::get_models,
             commands::ai::get_models_for_task,

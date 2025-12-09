@@ -208,7 +208,7 @@ export default function TokenEditor({
   const renderTimelineTab = () => (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium text-white">Temporal Changes</h3>
+        <h3 className="text-sm font-medium text-white">Scene Overrides</h3>
         <button className="text-xs px-2 py-1 bg-white/10 rounded hover:bg-white/20 transition-colors" onClick={() => {
             const newState: TemporalState = {
                 id: crypto.randomUUID(),
@@ -218,12 +218,12 @@ export default function TokenEditor({
                 changes: { description: '' }
             };
             setTemporalStates([...temporalStates, newState]);
-        }}>+ Add State</button>
+        }}>+ Add Override</button>
       </div>
       
       {temporalStates.length === 0 && (
         <div className="text-center py-8 text-white/30 text-sm border border-dashed border-white/10 rounded-lg">
-          No temporal changes defined.<br/>Character remains consistent throughout.
+          No overrides defined.<br/>Character remains consistent throughout.
         </div>
       )}
 

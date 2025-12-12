@@ -1,14 +1,42 @@
-import { create } from 'zustand';
+/**
+ * CinemaOS Store
+ * 
+ * Zustand v5 with best practices:
+ * - Slices pattern for modular state
+ * - Persist middleware for session persistence
+ * - Devtools for debugging
+ * - Immer for immutable updates
+ * - Selector hooks to avoid re-renders
+ */
 
-interface EditorState {
-  // Navigation & Views
+import { create, StateCreator } from 'zustand';
+import { devtools, persist, subscribeWithSelector } from 'zustand/middleware';
+import { immer } from 'zustand/middleware/immer';
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SLICE TYPES
+// ═══════════════════════════════════════════════════════════════════════════════
+
+interface NavigationSlice {
   isNavigatorOpen: boolean;
   isBeatBoardOpen: boolean;
   isIndexCardsOpen: boolean;
   isAnalysisOpen: boolean;
   isSidebarOpen: boolean;
+  
+  toggleNavigator: () => void;
+  setNavigatorOpen: (open: boolean) => void;
+  toggleBeatBoard: () => void;
+  setBeatBoardOpen: (open: boolean) => void;
+  toggleIndexCards: () => void;
+  setIndexCardsOpen: (open: boolean) => void;
+  toggleAnalysis: () => void;
+  setAnalysisOpen: (open: boolean) => void;
+  toggleSidebar: () => void;
+  setSidebarOpen: (open: boolean) => void;
+}
 
-  // Dialogs
+interface DialogSlice {
   isExportOpen: boolean;
   isKeyboardShortcutsOpen: boolean;
   isCommandPaletteOpen: boolean;
@@ -21,35 +49,6 @@ interface EditorState {
   isBookmarksOpen: boolean;
   isFindReplaceOpen: boolean;
   
-  // New Features
-  isRevisionPanelOpen: boolean;
-  isWritingStatsOpen: boolean;
-  isScriptCompareOpen: boolean;
-  isSceneLockPanelOpen: boolean;
-  isSpeakingModeOpen: boolean;
-  isVersionHistoryOpen: boolean;
-  isAltDialogueOpen: boolean;
-  
-  // Feature Flags / Toggles
-  isFocusModeActive: boolean;
-  isTypewriterEnabled: boolean;
-  
-  // Data for Dialogs
-  altDialogueData: { nodeKey: string | null; currentText: string };
-  notePopoverElementKey: string | null;
-
-  // Actions
-  toggleNavigator: () => void;
-  setNavigatorOpen: (open: boolean) => void;
-  toggleBeatBoard: () => void;
-  setBeatBoardOpen: (open: boolean) => void;
-  toggleIndexCards: () => void;
-  setIndexCardsOpen: (open: boolean) => void;
-  toggleAnalysis: () => void;
-  setAnalysisOpen: (open: boolean) => void;
-  toggleSidebar: () => void;
-  setSidebarOpen: (open: boolean) => void;
-  
   setExportOpen: (open: boolean) => void;
   setKeyboardShortcutsOpen: (open: boolean) => void;
   setCommandPaletteOpen: (open: boolean) => void;
@@ -61,6 +60,19 @@ interface EditorState {
   setThesaurusOpen: (open: boolean) => void;
   setBookmarksOpen: (open: boolean | ((prev: boolean) => boolean)) => void;
   setFindReplaceOpen: (open: boolean) => void;
+  closeAllDialogs: () => void;
+}
+
+interface FeatureSlice {
+  isRevisionPanelOpen: boolean;
+  isWritingStatsOpen: boolean;
+  isScriptCompareOpen: boolean;
+  isSceneLockPanelOpen: boolean;
+  isSpeakingModeOpen: boolean;
+  isVersionHistoryOpen: boolean;
+  isAltDialogueOpen: boolean;
+  isFocusModeActive: boolean;
+  isTypewriterEnabled: boolean;
   
   setRevisionPanelOpen: (open: boolean) => void;
   setWritingStatsOpen: (open: boolean) => void;
@@ -69,22 +81,55 @@ interface EditorState {
   setSpeakingModeOpen: (open: boolean) => void;
   setVersionHistoryOpen: (open: boolean) => void;
   setAltDialogueOpen: (open: boolean) => void;
-  
   setFocusModeActive: (active: boolean) => void;
   setTypewriterEnabled: (enabled: boolean) => void;
+}
+
+interface DataSlice {
+  altDialogueData: { nodeKey: string | null; currentText: string };
+  notePopoverElementKey: string | null;
   
   setAltDialogueData: (data: { nodeKey: string | null; currentText: string }) => void;
   setNotePopoverElementKey: (key: string | null) => void;
 }
 
-export const useEditorStore = create<EditorState>((set) => ({
-  // Initial State
+// Combined store type
+type EditorStore = NavigationSlice & DialogSlice & FeatureSlice & DataSlice;
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SLICE IMPLEMENTATIONS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const createNavigationSlice: StateCreator<
+  EditorStore,
+  [['zustand/immer', never], ['zustand/devtools', never]],
+  [],
+  NavigationSlice
+> = (set) => ({
   isNavigatorOpen: false,
   isBeatBoardOpen: false,
   isIndexCardsOpen: false,
   isAnalysisOpen: false,
   isSidebarOpen: false,
 
+  toggleNavigator: () => set((state) => { state.isNavigatorOpen = !state.isNavigatorOpen; }, false, 'nav/toggleNavigator'),
+  setNavigatorOpen: (open) => set((state) => { state.isNavigatorOpen = open; }, false, 'nav/setNavigatorOpen'),
+  toggleBeatBoard: () => set((state) => { state.isBeatBoardOpen = !state.isBeatBoardOpen; }, false, 'nav/toggleBeatBoard'),
+  setBeatBoardOpen: (open) => set((state) => { state.isBeatBoardOpen = open; }, false, 'nav/setBeatBoardOpen'),
+  toggleIndexCards: () => set((state) => { state.isIndexCardsOpen = !state.isIndexCardsOpen; }, false, 'nav/toggleIndexCards'),
+  setIndexCardsOpen: (open) => set((state) => { state.isIndexCardsOpen = open; }, false, 'nav/setIndexCardsOpen'),
+  toggleAnalysis: () => set((state) => { state.isAnalysisOpen = !state.isAnalysisOpen; }, false, 'nav/toggleAnalysis'),
+  setAnalysisOpen: (open) => set((state) => { state.isAnalysisOpen = open; }, false, 'nav/setAnalysisOpen'),
+  toggleSidebar: () => set((state) => { state.isSidebarOpen = !state.isSidebarOpen; }, false, 'nav/toggleSidebar'),
+  setSidebarOpen: (open) => set((state) => { state.isSidebarOpen = open; }, false, 'nav/setSidebarOpen'),
+});
+
+const createDialogSlice: StateCreator<
+  EditorStore,
+  [['zustand/immer', never], ['zustand/devtools', never]],
+  [],
+  DialogSlice
+> = (set) => ({
   isExportOpen: false,
   isKeyboardShortcutsOpen: false,
   isCommandPaletteOpen: false,
@@ -97,6 +142,41 @@ export const useEditorStore = create<EditorState>((set) => ({
   isBookmarksOpen: false,
   isFindReplaceOpen: false,
 
+  setExportOpen: (open) => set((state) => { state.isExportOpen = open; }, false, 'dialog/setExportOpen'),
+  setKeyboardShortcutsOpen: (open) => set((state) => { state.isKeyboardShortcutsOpen = open; }, false, 'dialog/setKeyboardShortcutsOpen'),
+  setCommandPaletteOpen: (open) => set((state) => { state.isCommandPaletteOpen = open; }, false, 'dialog/setCommandPaletteOpen'),
+  setPreferencesOpen: (open) => set((state) => { state.isPreferencesOpen = open; }, false, 'dialog/setPreferencesOpen'),
+  setGoToOpen: (open) => set((state) => { state.isGoToOpen = open; }, false, 'dialog/setGoToOpen'),
+  setTitlePageOpen: (open) => set((state) => { state.isTitlePageOpen = open; }, false, 'dialog/setTitlePageOpen'),
+  setCharRenameOpen: (open) => set((state) => { state.isCharRenameOpen = open; }, false, 'dialog/setCharRenameOpen'),
+  setReportsOpen: (open) => set((state) => { state.isReportsOpen = open; }, false, 'dialog/setReportsOpen'),
+  setThesaurusOpen: (open) => set((state) => { state.isThesaurusOpen = open; }, false, 'dialog/setThesaurusOpen'),
+  setBookmarksOpen: (open) => set((state) => { 
+    state.isBookmarksOpen = typeof open === 'function' ? open(state.isBookmarksOpen) : open; 
+  }, false, 'dialog/setBookmarksOpen'),
+  setFindReplaceOpen: (open) => set((state) => { state.isFindReplaceOpen = open; }, false, 'dialog/setFindReplaceOpen'),
+  
+  closeAllDialogs: () => set((state) => {
+    state.isExportOpen = false;
+    state.isKeyboardShortcutsOpen = false;
+    state.isCommandPaletteOpen = false;
+    state.isPreferencesOpen = false;
+    state.isGoToOpen = false;
+    state.isTitlePageOpen = false;
+    state.isCharRenameOpen = false;
+    state.isReportsOpen = false;
+    state.isThesaurusOpen = false;
+    state.isBookmarksOpen = false;
+    state.isFindReplaceOpen = false;
+  }, false, 'dialog/closeAllDialogs'),
+});
+
+const createFeatureSlice: StateCreator<
+  EditorStore,
+  [['zustand/immer', never], ['zustand/devtools', never]],
+  [],
+  FeatureSlice
+> = (set) => ({
   isRevisionPanelOpen: false,
   isWritingStatsOpen: false,
   isScriptCompareOpen: false,
@@ -104,52 +184,117 @@ export const useEditorStore = create<EditorState>((set) => ({
   isSpeakingModeOpen: false,
   isVersionHistoryOpen: false,
   isAltDialogueOpen: false,
-
   isFocusModeActive: false,
   isTypewriterEnabled: false,
 
+  setRevisionPanelOpen: (open) => set((state) => { state.isRevisionPanelOpen = open; }, false, 'feature/setRevisionPanelOpen'),
+  setWritingStatsOpen: (open) => set((state) => { state.isWritingStatsOpen = open; }, false, 'feature/setWritingStatsOpen'),
+  setScriptCompareOpen: (open) => set((state) => { state.isScriptCompareOpen = open; }, false, 'feature/setScriptCompareOpen'),
+  setSceneLockPanelOpen: (open) => set((state) => { state.isSceneLockPanelOpen = open; }, false, 'feature/setSceneLockPanelOpen'),
+  setSpeakingModeOpen: (open) => set((state) => { state.isSpeakingModeOpen = open; }, false, 'feature/setSpeakingModeOpen'),
+  setVersionHistoryOpen: (open) => set((state) => { state.isVersionHistoryOpen = open; }, false, 'feature/setVersionHistoryOpen'),
+  setAltDialogueOpen: (open) => set((state) => { state.isAltDialogueOpen = open; }, false, 'feature/setAltDialogueOpen'),
+  setFocusModeActive: (active) => set((state) => { state.isFocusModeActive = active; }, false, 'feature/setFocusModeActive'),
+  setTypewriterEnabled: (enabled) => set((state) => { state.isTypewriterEnabled = enabled; }, false, 'feature/setTypewriterEnabled'),
+});
+
+const createDataSlice: StateCreator<
+  EditorStore,
+  [['zustand/immer', never], ['zustand/devtools', never]],
+  [],
+  DataSlice
+> = (set) => ({
   altDialogueData: { nodeKey: null, currentText: '' },
   notePopoverElementKey: null,
 
-  // Actions implementation
-  toggleNavigator: () => set((state) => ({ isNavigatorOpen: !state.isNavigatorOpen })),
-  setNavigatorOpen: (open) => set({ isNavigatorOpen: open }),
-  
-  toggleBeatBoard: () => set((state) => ({ isBeatBoardOpen: !state.isBeatBoardOpen })),
-  setBeatBoardOpen: (open) => set({ isBeatBoardOpen: open }),
-  
-  toggleIndexCards: () => set((state) => ({ isIndexCardsOpen: !state.isIndexCardsOpen })),
-  setIndexCardsOpen: (open) => set({ isIndexCardsOpen: open }),
-  
-  toggleAnalysis: () => set((state) => ({ isAnalysisOpen: !state.isAnalysisOpen })),
-  setAnalysisOpen: (open) => set({ isAnalysisOpen: open }),
-  
-  toggleSidebar: () => set((state) => ({ isSidebarOpen: !state.isSidebarOpen })),
-  setSidebarOpen: (open) => set({ isSidebarOpen: open }),
+  setAltDialogueData: (data) => set((state) => { state.altDialogueData = data; }, false, 'data/setAltDialogueData'),
+  setNotePopoverElementKey: (key) => set((state) => { state.notePopoverElementKey = key; }, false, 'data/setNotePopoverElementKey'),
+});
 
-  setExportOpen: (open) => set({ isExportOpen: open }),
-  setKeyboardShortcutsOpen: (open) => set({ isKeyboardShortcutsOpen: open }),
-  setCommandPaletteOpen: (open) => set({ isCommandPaletteOpen: open }),
-  setPreferencesOpen: (open) => set({ isPreferencesOpen: open }),
-  setGoToOpen: (open) => set({ isGoToOpen: open }),
-  setTitlePageOpen: (open) => set({ isTitlePageOpen: open }),
-  setCharRenameOpen: (open) => set({ isCharRenameOpen: open }),
-  setReportsOpen: (open) => set({ isReportsOpen: open }),
-  setThesaurusOpen: (open) => set({ isThesaurusOpen: open }),
-  setBookmarksOpen: (open) => set((state) => ({ isBookmarksOpen: typeof open === 'function' ? open(state.isBookmarksOpen) : open })),
-  setFindReplaceOpen: (open) => set({ isFindReplaceOpen: open }),
+// ═══════════════════════════════════════════════════════════════════════════════
+// COMBINED STORE WITH MIDDLEWARE
+// ═══════════════════════════════════════════════════════════════════════════════
 
-  setRevisionPanelOpen: (open) => set({ isRevisionPanelOpen: open }),
-  setWritingStatsOpen: (open) => set({ isWritingStatsOpen: open }),
-  setScriptCompareOpen: (open) => set({ isScriptCompareOpen: open }),
-  setSceneLockPanelOpen: (open) => set({ isSceneLockPanelOpen: open }),
-  setSpeakingModeOpen: (open) => set({ isSpeakingModeOpen: open }),
-  setVersionHistoryOpen: (open) => set({ isVersionHistoryOpen: open }),
-  setAltDialogueOpen: (open) => set({ isAltDialogueOpen: open }),
+export const useEditorStore = create<EditorStore>()(
+  subscribeWithSelector(
+    devtools(
+      immer(
+        persist(
+          (...args) => ({
+            ...createNavigationSlice(...args),
+            ...createDialogSlice(...args),
+            ...createFeatureSlice(...args),
+            ...createDataSlice(...args),
+          }),
+          {
+            name: 'cinema-os-editor',
+            partialize: (state) => ({
+              // Only persist user preferences, not transient dialog state
+              isFocusModeActive: state.isFocusModeActive,
+              isTypewriterEnabled: state.isTypewriterEnabled,
+              isSidebarOpen: state.isSidebarOpen,
+            }),
+          }
+        )
+      ),
+      { name: 'CinemaOS Editor', enabled: import.meta.env.DEV }
+    )
+  )
+);
 
-  setFocusModeActive: (active) => set({ isFocusModeActive: active }),
-  setTypewriterEnabled: (enabled) => set({ isTypewriterEnabled: enabled }),
+// ═══════════════════════════════════════════════════════════════════════════════
+// SELECTOR HOOKS (avoid re-renders)
+// ═══════════════════════════════════════════════════════════════════════════════
 
-  setAltDialogueData: (data) => set({ altDialogueData: data }),
-  setNotePopoverElementKey: (key) => set({ notePopoverElementKey: key }),
+// Navigation selectors
+export const useIsNavigatorOpen = () => useEditorStore((s) => s.isNavigatorOpen);
+export const useIsBeatBoardOpen = () => useEditorStore((s) => s.isBeatBoardOpen);
+export const useIsIndexCardsOpen = () => useEditorStore((s) => s.isIndexCardsOpen);
+export const useIsAnalysisOpen = () => useEditorStore((s) => s.isAnalysisOpen);
+export const useIsSidebarOpen = () => useEditorStore((s) => s.isSidebarOpen);
+
+// Dialog selectors
+export const useIsExportOpen = () => useEditorStore((s) => s.isExportOpen);
+export const useIsCommandPaletteOpen = () => useEditorStore((s) => s.isCommandPaletteOpen);
+export const useIsPreferencesOpen = () => useEditorStore((s) => s.isPreferencesOpen);
+export const useIsFindReplaceOpen = () => useEditorStore((s) => s.isFindReplaceOpen);
+
+// Feature selectors
+export const useIsFocusModeActive = () => useEditorStore((s) => s.isFocusModeActive);
+export const useIsTypewriterEnabled = () => useEditorStore((s) => s.isTypewriterEnabled);
+export const useIsSpeakingModeOpen = () => useEditorStore((s) => s.isSpeakingModeOpen);
+
+// Action selectors (these never change, so they're stable)
+export const useEditorActions = () => useEditorStore((s) => ({
+  toggleNavigator: s.toggleNavigator,
+  toggleSidebar: s.toggleSidebar,
+  setCommandPaletteOpen: s.setCommandPaletteOpen,
+  setExportOpen: s.setExportOpen,
+  closeAllDialogs: s.closeAllDialogs,
 }));
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SUBSCRIPTION UTILITIES
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Subscribe to focus mode changes (useful for CSS transitions)
+ */
+export function subscribeToFocusMode(callback: (active: boolean) => void) {
+  return useEditorStore.subscribe(
+    (state) => state.isFocusModeActive,
+    callback,
+    { equalityFn: Object.is }
+  );
+}
+
+/**
+ * Subscribe to sidebar changes
+ */
+export function subscribeToSidebar(callback: (open: boolean) => void) {
+  return useEditorStore.subscribe(
+    (state) => state.isSidebarOpen,
+    callback,
+    { equalityFn: Object.is }
+  );
+}

@@ -135,7 +135,7 @@ impl Agent for Colorist {
         let response = llm
             .chat(request)
             .await
-            .map_err(|e| AgentError::ProcessingFailed(e))?;
+            .map_err(AgentError::ProcessingFailed)?;
 
         let actions = vec![AgentAction::ApplyColorGrade {
             model: "kling-ai-colourist".to_string(),

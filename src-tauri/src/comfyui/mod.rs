@@ -17,7 +17,6 @@ pub mod process;
 pub mod workflows;
 
 use std::path::PathBuf;
-use tauri::AppHandle;
 
 /// ComfyUI configuration
 #[derive(Debug, Clone)]

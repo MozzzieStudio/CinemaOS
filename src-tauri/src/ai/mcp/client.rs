@@ -19,7 +19,7 @@ impl MCPClient {
         tracing::info!("MCP Client calling tool: {} with params: {}", tool, params);
 
         // Create MCP message
-        let message = MCPMessage::ToolCall {
+        let _message = MCPMessage::ToolCall {
             tool: tool.to_string(),
             params,
         };
@@ -35,9 +35,9 @@ impl MCPClient {
 
     /// Update context with the MCP server
     pub async fn update_context(&self, tokens: Vec<String>, metadata: Value) -> Result<(), String> {
-        let message = MCPMessage::ContextUpdate { tokens, metadata };
+        let _message = MCPMessage::ContextUpdate { tokens, metadata };
 
-        tracing::info!("MCP Client updating context: {:?}", message);
+        tracing::info!("MCP Client updating context: {:?}", _message);
 
         Ok(())
     }

@@ -147,7 +147,7 @@ impl Agent for CastingDirector {
         let response = llm
             .chat(request)
             .await
-            .map_err(|e| AgentError::ProcessingFailed(e))?;
+            .map_err(AgentError::ProcessingFailed)?;
 
         // Actions for character consistency tools
         let actions = vec![AgentAction::SegmentAsset {

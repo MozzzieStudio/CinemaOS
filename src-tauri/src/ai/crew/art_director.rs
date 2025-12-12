@@ -144,7 +144,7 @@ impl Agent for ArtDirector {
         let response = llm
             .chat(request)
             .await
-            .map_err(|e| AgentError::ProcessingFailed(e))?;
+            .map_err(AgentError::ProcessingFailed)?;
 
         let actions = vec![AgentAction::Generate3D {
             prompt: message.to_string(),

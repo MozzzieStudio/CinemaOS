@@ -139,7 +139,7 @@ impl Agent for CameraDirector {
         let response = llm
             .chat(request)
             .await
-            .map_err(|e| AgentError::ProcessingFailed(e))?;
+            .map_err(AgentError::ProcessingFailed)?;
 
         // Suggest video generation action with best model
         let actions = vec![

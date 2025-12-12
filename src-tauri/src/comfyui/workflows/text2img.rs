@@ -20,7 +20,7 @@ pub fn flux_schnell_text2img(
     width: Option<u32>,
     height: Option<u32>,
 ) -> Value {
-    let seed = seed.unwrap_or_else(|| rand::random());
+    let seed = seed.unwrap_or_else(rand::random);
     let width = width.unwrap_or(1024);
     let height = height.unwrap_or(1024);
 

@@ -68,6 +68,7 @@ import AlternativeDialoguePlugin, { ADD_ALT_DIALOGUE_COMMAND, CYCLE_ALT_DIALOGUE
 import AlternativeDialogueDialog from "./AlternativeDialogueDialog";
 import PreferencesDialog, { usePreferences } from "../PreferencesDialog";
 import { calculatePagination, extractElementsFromRoot } from "../../lib/pagination";
+import type { ScriptContext, SceneNumbersConfig, MoresContinuedsConfig } from "../../types/scriptContext";
 
 const theme = {
   paragraph: "script-paragraph",
@@ -544,11 +545,11 @@ function EditorContent({ sceneNumbersConfig, moresContinuedsConfig, onScriptCont
 
 import { useEditorStore } from "../../stores/editorStore";
 
-// Props - drastically simplified
+// Props - Using proper types
 interface ScriptEditorProps {
-  sceneNumbersConfig: any;
-  moresContinuedsConfig: any;
-  onScriptContextChange: (context: any) => void; // Assuming ScriptContext is 'any' for now based on usage
+  sceneNumbersConfig: SceneNumbersConfig;
+  moresContinuedsConfig: MoresContinuedsConfig;
+  onScriptContextChange: (context: ScriptContext) => void;
 }
 
 export default function ScriptEditor({

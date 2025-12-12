@@ -3,16 +3,11 @@
 //! Exposes AI functionality to the frontend
 
 use crate::ai::{
-    agents::{
-        crew::VirtualCrew,
-        traits::{AgentInput, AgentOutput, AgentRole, ConversationTurn, VaultContext},
-    },
+    agents::traits::AgentRole,
     local::{detect_hardware, HardwareCapabilities},
     models::{get_all_models, get_local_models, ModelDefinition},
     router::{get_recommended_models, route_model_request, RoutingResult},
 };
-use std::collections::HashMap;
-use std::sync::OnceLock;
 
 // VIRTUAL_CREW removed as it was only used by legacy commands
 

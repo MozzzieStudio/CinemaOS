@@ -115,14 +115,21 @@ impl CostCalculator {
             // Local models (free)
             "llama-4" | "mistral" | "qwen-3" => (0.0, 0.0),
 
-            // Gemini 3 Pro (Google pricing)
-            "gemini-3-pro" => (0.000125, 0.0005), // per 1K tokens
+            // Gemini 3 Pro (Google pricing per 1K tokens)
+            "gemini-3-pro" => (0.000125, 0.0005),
 
-            // Claude Opus 4.5
+            // Claude Opus 4.5 (Anthropic pricing per 1K tokens)
             "claude-opus-4.5" => (0.015, 0.075),
 
-            // GPT-5
-            "gpt-5" => (0.010, 0.030),
+            // GPT-5 Family (OpenAI pricing per 1K tokens - December 2025)
+            // GPT-5 pro: $15/$120 per 1M = $0.015/$0.120 per 1K
+            "gpt-5-pro" => (0.015, 0.120),
+            // GPT-5 mini: $0.25/$2 per 1M = $0.00025/$0.002 per 1K
+            "gpt-5-mini" => (0.00025, 0.002),
+            // GPT-5 nano: $0.05/$0.40 per 1M = $0.00005/$0.0004 per 1K
+            "gpt-5-nano" => (0.00005, 0.0004),
+            // Legacy GPT-5 (maps to mini for backwards compat)
+            "gpt-5" => (0.00025, 0.002),
 
             _ => (0.0, 0.0),
         };

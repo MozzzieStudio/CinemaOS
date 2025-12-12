@@ -11,6 +11,12 @@ pub struct SyncEngine {
     pub doc: LoroDoc,
 }
 
+impl Default for SyncEngine {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SyncEngine {
     pub fn new() -> Self {
         Self {

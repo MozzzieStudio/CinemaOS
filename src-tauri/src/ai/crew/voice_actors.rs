@@ -138,7 +138,7 @@ impl Agent for VoiceActors {
         let response = llm
             .chat(request)
             .await
-            .map_err(|e| AgentError::ProcessingFailed(e))?;
+            .map_err(AgentError::ProcessingFailed)?;
 
         // Suggest TTS actions with different models
         let actions = vec![

@@ -7,7 +7,7 @@ use super::{
     MusicSFXDirector, PhotographyDirector, Scriptwriter, Showrunner, VoiceActors,
 };
 use crate::ai::{
-    Agent, AgentAction, AgentCapability, AgentContext, AgentError, AgentMetadata, AgentResponse,
+    Agent, AgentCapability, AgentContext, AgentError, AgentMetadata, AgentResponse,
     ProcessingLocation,
 };
 use async_trait::async_trait;

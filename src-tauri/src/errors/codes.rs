@@ -174,7 +174,7 @@ impl UIError {
 // Conversion helpers
 impl From<UIError> for String {
     fn from(err: UIError) -> String {
-        serde_json::to_string(&err).unwrap_or_else(|_| err.message)
+        serde_json::to_string(&err).unwrap_or(err.message)
     }
 }
 

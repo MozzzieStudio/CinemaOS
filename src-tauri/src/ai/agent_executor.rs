@@ -200,18 +200,16 @@ impl AgentExecutor {
         let lower = response.to_lowercase();
 
         // Photography Director → Image generation
-        if matches!(role, AgentRole::PhotographyDirector) {
-            if lower.contains("generating") || lower.contains("creating image") {
+        if matches!(role, AgentRole::PhotographyDirector)
+            && (lower.contains("generating") || lower.contains("creating image")) {
                 return Some(self.create_image_action(response));
             }
-        }
 
         // Camera Director → Video generation
-        if matches!(role, AgentRole::CameraDirector) {
-            if lower.contains("generating") || lower.contains("creating video") {
+        if matches!(role, AgentRole::CameraDirector)
+            && (lower.contains("generating") || lower.contains("creating video")) {
                 return Some(self.create_video_action(response));
             }
-        }
 
         // Check for JSON workflow in response
         if response.contains("\"class_type\"") {

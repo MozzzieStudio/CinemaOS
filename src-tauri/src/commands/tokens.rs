@@ -205,7 +205,7 @@ pub async fn extract_tokens_from_script(
                     .and_modify(|e| e.mentions += 1)
                     .or_insert(ExtractedEntity {
                         name: name.clone(),
-                        description: format!("Character appearing in the script"),
+                        description: "Character appearing in the script".to_string(),
                         mentions: 1,
                         first_appearance: format!("Line {}", i + 1),
                     });
@@ -232,7 +232,7 @@ pub async fn extract_tokens_from_script(
                     .and_modify(|e| e.mentions += 1)
                     .or_insert(ExtractedEntity {
                         name: location.clone(),
-                        description: format!("Location in the script"),
+                        description: "Location in the script".to_string(),
                         mentions: 1,
                         first_appearance: trimmed.to_string(),
                     });
@@ -282,7 +282,7 @@ pub async fn extract_tokens_from_script(
                         .and_modify(|e| e.mentions += 1)
                         .or_insert(ExtractedEntity {
                             name: prop_name.clone(),
-                            description: format!("Prop mentioned in action"),
+                            description: "Prop mentioned in action".to_string(),
                             mentions: 1,
                             first_appearance: format!("Line {}", i + 1),
                         });

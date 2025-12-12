@@ -18,40 +18,93 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = [] }
+# === CORE FRAMEWORK (Tauri v2.9.x - Dec 2025) ===
+tauri = { version = "2.9", features = [] }
 tauri-plugin-opener = "2"
 tauri-plugin-dialog = "2"
+
+# === SERIALIZATION ===
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-surrealdb = { version = "2.1.4", features = ["kv-mem"] }
+
+# === DATABASE (SurrealDB - Graph + Vector support) ===
+surrealdb = { version = "2.1.4", features = ["kv-mem", "kv-surrealkv"] }
+
+# === ASYNC RUNTIME ===
 tokio = { version = "1", features = ["full"] }
+
+# === ERROR HANDLING ===
 anyhow = "1.0.100"
+thiserror = "2.0"
+
+# === UTILITIES ===
 once_cell = "1.21.3"
-loro = "1.0.3"
 chrono = { version = "0.4", features = ["serde"] }
 async-trait = "0.1.89"
-reqwest = { version = "0.12", features = ["json", "rustls-tls", "stream"] }
+uuid = { version = "1.0", features = ["v4", "serde"] }
+rand = "0.8"
+textwrap = "0.16"
+base64 = "0.22"
+url = "2.5"
+dirs = "5"
 dotenvy = "0.15"
-# New dependencies for Fase 0-1
+
+# === CRDT (Loro - Real-time collaboration) ===
+loro = "1.0.3"
+
+# === HTTP CLIENT ===
+reqwest = { version = "0.12", features = ["json", "rustls-tls", "stream"] }
+
+# === gRPC (Tonic - bi-directional streaming) ===
+tonic = { version = "0.12", features = ["tls", "gzip"] }
+prost = "0.13"
+
+# === TYPE GENERATION ===
 specta = "2.0.0-rc.21"
 tauri-specta = { version = "2.0.0-rc.21", features = ["derive", "typescript"] }
+
+# === OBSERVABILITY ===
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+sentry = { version = "0.35", features = ["tracing"] }
+
+# === SECURITY ===
 keyring = "3"
+
+# === SANDBOXING (Wasmtime - Agent isolation) ===
+wasmtime = { version = "27", features = ["cranelift", "component-model"] }
+
+# === SYSTEM INFO ===
 sys-info = "0.9"
-uuid = { version = "1.0", features = ["v4", "serde"] }
+
+# === GRAPHICS ===
 wgpu = { version = "23.0", features = [] }
 
-thiserror = "2.0"
-sentry = { version = "0.35", features = ["tracing"] }
-textwrap = "0.16"
-rand = "0.8"
-# ComfyUI Bridge
+# === WEBSOCKET (ComfyUI Bridge) ===
 tokio-tungstenite = { version = "0.26", features = ["native-tls"] }
 futures-util = "0.3"
-url = "2.5"
-# Installer
-dirs = "5"
-# Vault API
+
+# === WEB SERVER (Vault API) ===
 axum = "0.7"
-base64 = "0.22"
+
+
+# Release profile optimizations
+[profile.release]
+# Link-time optimization for smaller, faster binaries
+lto = true
+# Single codegen unit for maximum optimization
+codegen-units = 1
+# Abort on panic for smaller binary size
+panic = "abort"
+# Strip symbols for smaller binary
+strip = true
+# Optimize for size
+opt-level = "z"
+
+# Development profile - faster builds
+[profile.dev]
+# Split for faster incremental builds
+codegen-units = 256
+# Faster dev builds with basic optimizations
+opt-level = 1
+

@@ -140,7 +140,7 @@ impl Agent for MusicSFXDirector {
         let response = llm
             .chat(request)
             .await
-            .map_err(|e| AgentError::ProcessingFailed(e))?;
+            .map_err(AgentError::ProcessingFailed)?;
 
         // Suggest audio generation actions
         let actions = vec![

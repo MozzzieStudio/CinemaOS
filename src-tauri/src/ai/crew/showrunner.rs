@@ -130,7 +130,7 @@ impl Agent for Showrunner {
         let response = llm
             .chat(request)
             .await
-            .map_err(|e| AgentError::ProcessingFailed(e))?;
+            .map_err(AgentError::ProcessingFailed)?;
 
         Ok(AgentResponse {
             agent: self.name().to_string(),

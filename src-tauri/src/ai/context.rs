@@ -159,6 +159,19 @@ pub struct AgentContext {
     pub mode: String,
     /// Project name
     pub project_name: Option<String>,
+    /// User preferences (moved from mod.rs)
+    pub preferences: Option<UserPreferences>,
+}
+
+/// User preferences for AI execution
+#[derive(Debug, Clone, Default, Serialize, Deserialize, Type)]
+pub struct UserPreferences {
+    /// Prefer local processing (privacy)
+    pub prefer_local: bool,
+    /// Max credits per request
+    pub max_credits_per_request: f32,
+    /// Preferred models
+    pub preferred_models: Vec<String>,
 }
 
 impl AgentContext {
@@ -170,6 +183,7 @@ impl AgentContext {
             vault: None,
             mode: "writer".into(),
             project_name: None,
+            preferences: None,
         }
     }
 
@@ -253,6 +267,7 @@ mod tests {
             vault: None,
             mode: "writer".into(),
             project_name: Some("My Film".into()),
+            preferences: None,
         };
 
         let prompt = ctx.to_prompt_context();

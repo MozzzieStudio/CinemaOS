@@ -34,3 +34,24 @@ src-tauri/target/
 .env.local
 .env.development
 .env.production
+
+# Temporary/Debug files
+*.txt
+!README*.txt
+src-tauri/snippet.txt
+check_errors.txt
+tsc_errors.txt
+
+# IDE / OS
+*.bak
+*.tmp
+Thumbs.db
+
+# Secrets / API Keys (explicit patterns)
+secrets/
+**/secrets/
+*.pem
+*.key
+*.p12
+credentials.json
+service-account*.json

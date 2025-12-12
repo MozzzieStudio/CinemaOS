@@ -13,7 +13,6 @@
 
 use serde::{Deserialize, Serialize};
 use specta::Type;
-use surrealdb::sql::Thing;
 
 /// Token type enum
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Type)]

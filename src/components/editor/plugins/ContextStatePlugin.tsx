@@ -1,10 +1,8 @@
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { useEffect } from "react";
 import {
-  $getRoot,
   $getSelection,
   $isRangeSelection,
-  RangeSelection,
 } from "lexical";
 
 export default function ContextStatePlugin({
@@ -25,13 +23,13 @@ export default function ContextStatePlugin({
         // Or finding the closest previous Scene Heading.
         // For performance, we might want to do this debounced or only on selection change.
 
-        const anchorNode = selection.anchor.getNode();
-        const topLevel = anchorNode.getTopLevelElementOrThrow();
+        // const anchorNode = selection.anchor.getNode();
+        // const topLevel = anchorNode.getTopLevelElementOrThrow();
 
         // Traverse backwards to find a Scene Heading
-        let currentLoopNode = topLevel;
-        let sceneCount = 0;
-        let found = false;
+        // let currentLoopNode = topLevel;
+        // let sceneCount = 0;
+        // let found = false;
 
         // In a real optimized app, we'd cache scene ranges.
         // For now, let's just count ALL scene headings in the doc up to this point? Too slow.
@@ -39,8 +37,8 @@ export default function ContextStatePlugin({
         // OR: Just assume the user is editing linear.
 
         // Hacky MVP: Walk previous siblings.
-        let node = topLevel;
-        let sceneNumCandidate = 0;
+        // let node = topLevel;
+        // let sceneNumCandidate = 0;
 
         // This is expensive O(N).
         // Better: The Editor probably maintains a list of Scenes or we should use the Navigator data.

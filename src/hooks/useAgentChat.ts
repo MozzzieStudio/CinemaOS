@@ -8,10 +8,12 @@ import type {
   AgentRole,
   AgentContext,
   ChatMessage,
-  FullAgentRequest,
+
   FullAgentResponse,
   AgentAction,
   ActionResult,
+  CrewChatRequest,
+  CrewChatResponse,
 } from '../types/agents';
 
 interface UseAgentChatOptions {
@@ -78,17 +80,24 @@ export function useAgentChat(options: UseAgentChatOptions = {}): UseAgentChatRet
       setMessages((prev) => [...prev, userMessage]);
 
       try {
-        const request: FullAgentRequest = {
-          agent_role: agentRole,
+        const request: CrewChatRequest = {
           message,
+          prefer_local: true, // TODO: Get from preferences
+          max_credits: 10.0, // TODO: Get from preferences
+          model_selection: provider ? { provider, model } : undefined,
           context,
-          history: messages,
-          provider,
-          model,
-          auto_execute: autoExecute,
         };
 
-        const response = await invoke<FullAgentResponse>('agent_chat_full', { request });
+        const backendResponse = await invoke<CrewChatResponse>('chat_with_crew', { request });
+
+        const response: FullAgentResponse = {
+            message: backendResponse.content,
+            agent_role: backendResponse.agent as AgentRole,
+            model_used: backendResponse.model,
+            actions: backendResponse.actions,
+            action_results: [],
+            tokens_used: 0
+        };
 
         // Add assistant message to history
         const assistantMessage: ChatMessage = { role: 'assistant', content: response.message };
@@ -97,6 +106,19 @@ export function useAgentChat(options: UseAgentChatOptions = {}): UseAgentChatRet
         setLastResponse(response);
         setPendingActions(response.actions);
         setActionResults(response.action_results);
+
+        if (autoExecute && response.actions.length > 0) {
+            // Auto-execute logic
+            // We call executeAllActions but need to wait for state update? 
+            // Better to just call internal logic or let useEffect handle it if we had one.
+            // For now, simple delay or call logic directly.
+            response.actions.forEach(action => {
+                invoke<ActionResult>('execute_agent_action', { action }).then(result => {
+                    setActionResults(prev => [...prev, result]);
+                });
+            });
+            setPendingActions([]);
+        }
 
         return response;
       } catch (err) {
@@ -109,30 +131,33 @@ export function useAgentChat(options: UseAgentChatOptions = {}): UseAgentChatRet
     },
     [agentRole, messages, provider, model, autoExecute]
   );
-
+  
   const executeAction = useCallback(async (action: AgentAction): Promise<ActionResult> => {
     try {
       const result = await invoke<ActionResult>('execute_agent_action', { action });
-      setActionResults((prev) => [...prev, result]);
-      // Remove from pending
-      setPendingActions((prev) => prev.filter((a) => a !== action));
+      setActionResults(prev => [...prev, result]);
+      setPendingActions(prev => prev.filter(a => a !== action));
       return result;
     } catch (err) {
-      const errorResult: ActionResult = {
+      const result: ActionResult = {
         success: false,
-        action_type: action.type,
+        action_type: 'unknown',
         error: err instanceof Error ? err.message : String(err),
       };
-      setActionResults((prev) => [...prev, errorResult]);
-      return errorResult;
+      return result;
     }
   }, []);
 
   const executeAllActions = useCallback(async (): Promise<ActionResult[]> => {
     try {
-      const results = await invoke<ActionResult[]>('execute_agent_actions', {
-        actions: pendingActions,
-      });
+      const promises = pendingActions.map(action => 
+        invoke<ActionResult>('execute_agent_action', { action })
+          .then(result => ({ ...result, originalAction: action }))
+      );
+      
+      const resultsWithAction = await Promise.all(promises);
+      const results = resultsWithAction.map(({ originalAction, ...r }) => r as ActionResult);
+      
       setActionResults((prev) => [...prev, ...results]);
       setPendingActions([]);
       return results;

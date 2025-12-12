@@ -88,6 +88,9 @@ export type AgentAction =
   | { type: 'GenerateImage'; prompt: string; model: string; width: number; height: number; token_ids: string[] }
   | { type: 'GenerateVideo'; prompt: string; model: string; duration_seconds: number; reference_image?: string; token_ids: string[] }
   | { type: 'GenerateAudio'; prompt: string; audio_type: AudioActionType; model: string; duration_seconds?: number }
+  | { type: 'Generate3D'; prompt: string; model: string }
+  | { type: 'SegmentAsset'; prompt: string; model: string; mode: string }
+  | { type: 'ApplyColorGrade'; model: string; style: string }
   | { type: 'UpdateScript'; mode: ScriptUpdateMode; content: string; line_start?: number; line_end?: number }
   | { type: 'AddToCanvas'; node_type: CanvasNodeType; content: string; position?: [number, number]; token_id?: string }
   | { type: 'UpdateVault'; token_type: string; token_name: string; description: string; reference_image?: string }
@@ -206,3 +209,25 @@ export const AGENT_ROLES: Record<AgentRole, { name: string; description: string;
     icon: '🌈',
   },
 };
+
+export interface ModelSelection {
+  provider: string;
+  model?: string;
+}
+
+export interface CrewChatRequest {
+  message: string;
+  prefer_local: boolean;
+  max_credits: number;
+  model_selection?: ModelSelection;
+  context?: AgentContext;
+}
+
+export interface CrewChatResponse {
+  agent: string;
+  content: string;
+  actions: AgentAction[];
+  cost: number;
+  model: string;
+  provider: string;
+}

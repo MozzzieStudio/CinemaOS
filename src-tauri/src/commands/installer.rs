@@ -6,8 +6,8 @@ use crate::installer::{
     detect_hardware, download_model, download_via_ollama, get_downloaded_models,
     get_installation_state, get_model_recommendations, get_model_sources, get_ollama_models,
     get_recommended_models, get_runnable_models, install_all, is_model_downloaded,
-    is_ollama_installed, ComfyUIProcess, DownloadProgress, HardwareInfo, InstallationState,
-    ModelRecommendation, ModelSource,
+    is_ollama_installed, ComfyUIProcess, HardwareInfo, InstallationState, ModelRecommendation,
+    ModelSource,
 };
 use once_cell::sync::Lazy;
 use std::sync::Arc;
@@ -50,30 +50,6 @@ pub async fn run_installation() -> Result<String, String> {
     .await?;
 
     Ok("Installation complete".into())
-}
-
-/// Start ComfyUI process
-#[tauri::command]
-#[specta::specta]
-pub async fn start_comfyui() -> Result<(), String> {
-    let mut process = COMFYUI_PROCESS.write().await;
-    process.start().await
-}
-
-/// Stop ComfyUI process
-#[tauri::command]
-#[specta::specta]
-pub async fn stop_comfyui() -> Result<(), String> {
-    let mut process = COMFYUI_PROCESS.write().await;
-    process.stop().await
-}
-
-/// Check if ComfyUI is running
-#[tauri::command]
-#[specta::specta]
-pub async fn is_comfyui_running() -> bool {
-    let process = COMFYUI_PROCESS.read().await;
-    process.is_running()
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

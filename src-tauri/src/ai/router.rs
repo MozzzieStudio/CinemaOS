@@ -7,10 +7,10 @@
 
 use crate::ai::{
     local::{
-        can_run_locally, detect_hardware, get_local_provider, HardwareCapabilities, LocalProvider,
+        can_run_locally, get_local_provider, HardwareCapabilities,
     },
     models::{get_all_models, ModelDefinition, ModelLocation},
-    providers::{get_provider_for_model, CloudProvider},
+    providers::get_provider_for_model,
 };
 use serde::{Deserialize, Serialize};
 use specta::Type;

@@ -5,7 +5,7 @@
 
 use crate::ai::agents::{
     prompts::get_system_prompt,
-    traits::{Agent, AgentAction, AgentInput, AgentOutput, AgentRole},
+    traits::{Agent, AgentInput, AgentOutput, AgentRole},
 };
 use std::collections::HashMap;
 
@@ -84,12 +84,12 @@ impl Agent for CrewMember {
     }
 
     async fn process(&self, input: AgentInput) -> AgentOutput {
-        // TODO: Implement actual LLM call via MCP
-        // For now, return a placeholder response
+        // NOTE: Real LLM integration happens via Backend Cloud (Phase 5)
+        // This placeholder allows frontend testing without backend dependency
 
         let response_message = format!(
             "[{}] I received your request: \"{}\". \
-            (This is a placeholder - real LLM integration coming via MCP)",
+            (Real LLM call will happen via Backend Cloud API)",
             self.role.display_name(),
             input.message
         );

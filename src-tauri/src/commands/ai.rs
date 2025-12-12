@@ -14,15 +14,7 @@ use crate::ai::{
 use std::collections::HashMap;
 use std::sync::OnceLock;
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// VIRTUAL CREW (Singleton)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-static VIRTUAL_CREW: OnceLock<VirtualCrew> = OnceLock::new();
-
-fn get_crew() -> &'static VirtualCrew {
-    VIRTUAL_CREW.get_or_init(VirtualCrew::new)
-}
+// VIRTUAL_CREW removed as it was only used by legacy commands
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // MODEL COMMANDS
@@ -32,6 +24,7 @@ fn get_crew() -> &'static VirtualCrew {
 #[tauri::command]
 #[specta::specta]
 pub fn get_models() -> Vec<ModelDefinition> {
+    tracing::debug!("Fetching all models");
     get_all_models()
 }
 
@@ -39,6 +32,7 @@ pub fn get_models() -> Vec<ModelDefinition> {
 #[tauri::command]
 #[specta::specta]
 pub fn get_models_for_task(task_type: String) -> Vec<ModelDefinition> {
+    tracing::debug!("Fetching models for task: {}", task_type);
     let hw = detect_hardware();
     get_recommended_models(&task_type, &hw)
         .into_iter()
@@ -50,6 +44,7 @@ pub fn get_models_for_task(task_type: String) -> Vec<ModelDefinition> {
 #[tauri::command]
 #[specta::specta]
 pub fn get_free_models() -> Vec<ModelDefinition> {
+    tracing::debug!("Fetching local models");
     get_local_models()
 }
 
@@ -57,6 +52,7 @@ pub fn get_free_models() -> Vec<ModelDefinition> {
 #[tauri::command]
 #[specta::specta]
 pub fn get_hardware_capabilities() -> HardwareCapabilities {
+    tracing::info!("Detecting hardware capabilities");
     detect_hardware()
 }
 
@@ -64,6 +60,11 @@ pub fn get_hardware_capabilities() -> HardwareCapabilities {
 #[tauri::command]
 #[specta::specta]
 pub fn route_request(model_id: String, prefer_local: bool) -> Result<RoutingResult, String> {
+    tracing::info!(
+        "Routing request for model: {}, prefer_local: {}",
+        model_id,
+        prefer_local
+    );
     let hw = detect_hardware();
     route_model_request(&model_id, &hw, prefer_local).map_err(|e| e.to_string())
 }
@@ -72,6 +73,7 @@ pub fn route_request(model_id: String, prefer_local: bool) -> Result<RoutingResu
 #[tauri::command]
 #[specta::specta]
 pub fn get_available_local_models() -> Vec<ModelDefinition> {
+    tracing::debug!("Fetching available local models");
     let hw = detect_hardware();
     get_local_models()
         .into_iter()
@@ -87,6 +89,7 @@ pub fn get_available_local_models() -> Vec<ModelDefinition> {
 #[tauri::command]
 #[specta::specta]
 pub fn get_agent_roles_detailed() -> Vec<AgentRoleInfo> {
+    tracing::info!("Fetching detailed agent roles");
     AgentRole::all()
         .iter()
         .map(|role| AgentRoleInfo {
@@ -105,39 +108,11 @@ pub struct AgentRoleInfo {
     pub role: AgentRole,
 }
 
-/// Chat with a specific agent (legacy - uses placeholder)
-#[tauri::command]
-#[specta::specta]
-pub async fn agent_chat_legacy(
-    role: AgentRole,
-    message: String,
-    history: Vec<ConversationTurn>,
-    vault_context: Option<VaultContext>,
-) -> Result<AgentOutput, String> {
-    let crew = get_crew();
-
-    let input = AgentInput {
-        message,
-        vault_context,
-        history,
-        params: HashMap::new(),
-    };
-
-    crew.process(role, input).await
-}
-
-/// Route a message to the best agent based on intent (legacy)
-#[tauri::command]
-#[specta::specta]
-pub fn route_to_agent_legacy(message: String) -> AgentRole {
-    let crew = get_crew();
-    crew.route_by_intent(&message)
-}
-
 /// Get the system prompt for an agent (for debugging/transparency)
 #[tauri::command]
 #[specta::specta]
 pub fn get_agent_prompt(role: AgentRole) -> String {
+    tracing::info!("Fetching system prompt for role: {:?}", role);
     use crate::ai::agents::prompts::get_system_prompt;
     get_system_prompt(role).to_string()
 }
@@ -146,6 +121,7 @@ pub fn get_agent_prompt(role: AgentRole) -> String {
 #[tauri::command]
 #[specta::specta]
 pub fn get_agent_models(role: AgentRole) -> Vec<String> {
+    tracing::info!("Fetching recommended models for role: {:?}", role);
     use crate::ai::agents::crew::CrewMember;
     let member = CrewMember::new(role);
     member

@@ -35,13 +35,25 @@ pub enum AgentAction {
         token_ids: Vec<String>,
     },
 
-    /// Generate audio (voice, music, sfx)
     GenerateAudio {
         prompt: String,
         audio_type: AudioActionType,
         model: String,
         duration_seconds: Option<f32>,
     },
+
+    /// Generate 3D asset
+    Generate3D { prompt: String, model: String },
+
+    /// Segment/Mask an asset
+    SegmentAsset {
+        prompt: String,
+        model: String,
+        mode: String,
+    },
+
+    /// Apply color grading
+    ApplyColorGrade { model: String, style: String },
 
     /// Update the script content
     UpdateScript {
@@ -294,6 +306,29 @@ impl ActionExecutor {
                     "duration": duration_seconds
                 }))
             }
+            AgentAction::Generate3D { prompt, model } => ActionResult::success("generate_3d")
+                .with_data(serde_json::json!({
+                    "prompt": prompt,
+                    "model": model,
+                    "status": "placeholder"
+                })),
+            AgentAction::SegmentAsset {
+                prompt,
+                model,
+                mode,
+            } => ActionResult::success("segment_asset").with_data(serde_json::json!({
+                "prompt": prompt,
+                "model": model,
+                "mode": mode,
+                "status": "placeholder"
+            })),
+            AgentAction::ApplyColorGrade { model, style } => {
+                ActionResult::success("apply_color_grade").with_data(serde_json::json!({
+                    "model": model,
+                    "style": style,
+                    "status": "placeholder"
+                }))
+            }
         }
     }
 
@@ -307,9 +342,9 @@ impl ActionExecutor {
         // Create workflow request
         let request = WorkflowRequest {
             workflow_type: WorkflowType::TextToImage,
-            prompt,
+            prompt: prompt.clone(),
             negative_prompt: None,
-            model,
+            model: model.clone(),
             width,
             height,
             steps: None,
@@ -321,19 +356,56 @@ impl ActionExecutor {
             } else {
                 Some(token_ids.join(","))
             },
+            force_local: Some(false),
         };
 
         let workflow = generate_workflow(&request);
 
-        // Return workflow for frontend to execute via ComfyUI commands
-        ActionResult::success("generate_image")
-            .with_execution_id(uuid::Uuid::new_v4().to_string())
-            .with_credits(workflow.estimated_credits)
-            .with_data(serde_json::json!({
-                "is_local": workflow.is_local,
-                "workflow": workflow.workflow_json,
-                "status": "pending"
-            }))
+        // If local workflow, execute via ComfyUI
+        if workflow.is_local {
+            use crate::comfyui::client::ComfyUIClient;
+
+            // TODO: Get host/port from config
+            let client = ComfyUIClient::new("127.0.0.1", 8188);
+
+            let workflow_json: serde_json::Value =
+                match serde_json::from_str(&workflow.workflow_json) {
+                    Ok(v) => v,
+                    Err(e) => {
+                        return ActionResult::error(
+                            "generate_image",
+                            &format!("Invalid generated workflow JSON: {}", e),
+                        )
+                    }
+                };
+
+            match client.queue_prompt(workflow_json).await {
+                Ok(response) => ActionResult::success("generate_image")
+                    .with_execution_id(response.prompt_id.clone())
+                    .with_credits(workflow.estimated_credits)
+                    .with_data(serde_json::json!({
+                        "is_local": true,
+                        "workflow": workflow.workflow_json,
+                        "status": "queued",
+                        "prompt_id": response.prompt_id,
+                        "number": response.number
+                    })),
+                Err(e) => ActionResult::error(
+                    "generate_image",
+                    &format!("Failed to queue local workflow: {}", e),
+                ),
+            }
+        } else {
+            // Cloud workflow (Fal.ai / etc) - Logic pending Phase A5
+            ActionResult::success("generate_image")
+                .with_execution_id(uuid::Uuid::new_v4().to_string())
+                .with_credits(workflow.estimated_credits)
+                .with_data(serde_json::json!({
+                    "is_local": false,
+                    "workflow": workflow.workflow_json,
+                    "status": "pending_cloud_execution"
+                }))
+        }
     }
 
     async fn execute_generate_video(
@@ -351,9 +423,9 @@ impl ActionExecutor {
 
         let request = WorkflowRequest {
             workflow_type,
-            prompt,
+            prompt: prompt.clone(),
             negative_prompt: None,
-            model,
+            model: model.clone(),
             width: 1280,
             height: 720,
             steps: None,
@@ -365,18 +437,55 @@ impl ActionExecutor {
             } else {
                 Some(token_ids.join(","))
             },
+            force_local: Some(false),
         };
 
         let workflow = generate_workflow(&request);
 
-        // Return workflow for frontend to execute
-        ActionResult::success("generate_video")
-            .with_execution_id(uuid::Uuid::new_v4().to_string())
-            .with_credits(workflow.estimated_credits)
-            .with_data(serde_json::json!({
-                "workflow": workflow.workflow_json,
-                "status": "pending"
-            }))
+        // If local workflow, execute via ComfyUI
+        if workflow.is_local {
+            use crate::comfyui::client::ComfyUIClient;
+
+            let client = ComfyUIClient::new("127.0.0.1", 8188);
+
+            let workflow_json: serde_json::Value =
+                match serde_json::from_str(&workflow.workflow_json) {
+                    Ok(v) => v,
+                    Err(e) => {
+                        return ActionResult::error(
+                            "generate_video",
+                            &format!("Invalid generated workflow JSON: {}", e),
+                        )
+                    }
+                };
+
+            match client.queue_prompt(workflow_json).await {
+                Ok(response) => ActionResult::success("generate_video")
+                    .with_execution_id(response.prompt_id.clone())
+                    .with_credits(workflow.estimated_credits)
+                    .with_data(serde_json::json!({
+                        "is_local": true,
+                        "workflow": workflow.workflow_json,
+                        "status": "queued",
+                        "prompt_id": response.prompt_id,
+                        "number": response.number
+                    })),
+                Err(e) => ActionResult::error(
+                    "generate_video",
+                    &format!("Failed to queue local workflow: {}", e),
+                ),
+            }
+        } else {
+            // Cloud workflow
+            ActionResult::success("generate_video")
+                .with_execution_id(uuid::Uuid::new_v4().to_string())
+                .with_credits(workflow.estimated_credits)
+                .with_data(serde_json::json!({
+                    "is_local": false,
+                    "workflow": workflow.workflow_json,
+                    "status": "pending_cloud_execution"
+                }))
+        }
     }
 
     async fn execute_vault_update(
@@ -395,13 +504,30 @@ impl ActionExecutor {
     }
 
     async fn execute_comfyui_workflow(workflow_json: String) -> ActionResult {
-        // Return workflow for frontend to execute via comfyui_execute command
-        ActionResult::success("execute_workflow")
-            .with_execution_id(uuid::Uuid::new_v4().to_string())
-            .with_data(serde_json::json!({
-                "workflow": workflow_json,
-                "status": "pending"
-            }))
+        use crate::comfyui::client::ComfyUIClient;
+        // Parse string to Value
+        let workflow_value: serde_json::Value = match serde_json::from_str(&workflow_json) {
+            Ok(v) => v,
+            Err(e) => {
+                return ActionResult::error("execute_workflow", &format!("Invalid JSON: {}", e))
+            }
+        };
+
+        let client = ComfyUIClient::new("127.0.0.1", 8188);
+
+        match client.queue_prompt(workflow_value).await {
+            Ok(response) => ActionResult::success("execute_workflow")
+                .with_execution_id(response.prompt_id.clone())
+                .with_data(serde_json::json!({
+                    "status": "queued",
+                    "prompt_id": response.prompt_id,
+                    "number": response.number
+                })),
+            Err(e) => ActionResult::error(
+                "execute_workflow",
+                &format!("Failed to queue workflow: {}", e),
+            ),
+        }
     }
 }
 

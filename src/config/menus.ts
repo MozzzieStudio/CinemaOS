@@ -1,5 +1,5 @@
 import { toast } from "sonner";
-
+import { useEditorStore } from "../stores/editorStore";
 
 export interface MenuItem {
   label?: string;
@@ -18,34 +18,12 @@ export interface Menu {
 
 export const createMenus = (
     dispatchCommand: (type: string, payload?: any) => void,
-    toggleState: {
-        isNavigatorOpen: boolean; setIsNavigatorOpen: (v: boolean) => void;
-        isBeatBoardOpen: boolean; setIsBeatBoardOpen: (v: boolean) => void;
-        isIndexCardsOpen: boolean; setIsIndexCardsOpen: (v: boolean) => void;
-        isFocusModeActive: boolean; setIsFocusModeActive: (v: boolean) => void;
-        isTypewriterEnabled: boolean; setIsTypewriterEnabled: (v: boolean) => void;
-        isRevisionPanelOpen: boolean; setIsRevisionPanelOpen: (v: boolean) => void;
-        isWritingStatsOpen: boolean; setIsWritingStatsOpen: (v: boolean) => void;
-        isAnalysisOpen: boolean; setIsAnalysisOpen: (v: boolean) => void;
-        isSidebarOpen: boolean; setIsSidebarOpen: (v: boolean) => void;
-        isKeyboardShortcutsOpen: boolean; setIsKeyboardShortcutsOpen: (v: boolean) => void;
-    },
     pluginConfig: {
         sceneNumbers: { enabled: boolean; toggle: () => void };
         moresContinueds: { enabled: boolean; toggle: () => void };
     }
 ): Menu[] => {
-  const {
-      isNavigatorOpen, setIsNavigatorOpen,
-      setIsBeatBoardOpen, setIsIndexCardsOpen,
-      isFocusModeActive, setIsFocusModeActive,
-      isTypewriterEnabled, setIsTypewriterEnabled,
-      isRevisionPanelOpen, setIsRevisionPanelOpen,
-      isWritingStatsOpen, setIsWritingStatsOpen,
-      isAnalysisOpen, setIsAnalysisOpen,
-      setIsSidebarOpen,
-      setIsKeyboardShortcutsOpen
-  } = toggleState;
+  const store = useEditorStore.getState();
 
   return [
     {
@@ -64,9 +42,9 @@ export const createMenus = (
         }},
         { label: 'Save As...', shortcut: 'Ctrl+Shift+S', action: () => dispatchCommand('SAVE_AS') },
         { divider: true },
-        { label: 'Import FDX...', action: () => dispatchCommand('EXPORT_FDX') }, // Changed to ensure panel opens
-        { label: 'Import PDF...', action: () => dispatchCommand('EXPORT_PDF') }, // Changed to ensure panel opens
-        { label: 'Import Fountain...', action: () => dispatchCommand('EXPORT_FDX') }, // Opens panel
+        { label: 'Import FDX...', action: () => dispatchCommand('EXPORT_FDX') }, 
+        { label: 'Import PDF...', action: () => dispatchCommand('EXPORT_PDF') }, 
+        { label: 'Import Fountain...', action: () => dispatchCommand('EXPORT_FDX') }, 
         { divider: true },
         { label: 'Export FDX...', action: () => dispatchCommand('EXPORT_FDX') },
         { label: 'Export PDF...', action: () => dispatchCommand('EXPORT_PDF') },
@@ -93,17 +71,17 @@ export const createMenus = (
     {
       id: 'view', label: 'View',
       items: [
-        { label: 'Navigator', shortcut: 'F2', action: () => setIsNavigatorOpen(!isNavigatorOpen) },
-        { label: 'Beat Board', action: () => setIsBeatBoardOpen(true) },
-        { label: 'Index Cards', action: () => setIsIndexCardsOpen(true) },
+        { label: 'Navigator', shortcut: 'F2', action: () => store.toggleNavigator() },
+        { label: 'Beat Board', action: () => store.setBeatBoardOpen(true) },
+        { label: 'Index Cards', action: () => store.setIndexCardsOpen(true) },
         { divider: true },
-        { label: 'Focus Mode', shortcut: 'F11', action: () => setIsFocusModeActive(!isFocusModeActive) },
-        { label: isTypewriterEnabled ? '✓ Typewriter Mode' : 'Typewriter Mode', action: () => setIsTypewriterEnabled(!isTypewriterEnabled) },
+        { label: 'Focus Mode', shortcut: 'F11', action: () => store.setFocusModeActive(!store.isFocusModeActive) },
+        { label: store.isTypewriterEnabled ? '✓ Typewriter Mode' : 'Typewriter Mode', action: () => store.setTypewriterEnabled(!store.isTypewriterEnabled) },
         { divider: true },
-        { label: 'Track Changes', action: () => setIsRevisionPanelOpen(!isRevisionPanelOpen) },
-        { label: 'Writing Stats', action: () => setIsWritingStatsOpen(!isWritingStatsOpen) },
+        { label: 'Track Changes', action: () => store.setRevisionPanelOpen(!store.isRevisionPanelOpen) },
+        { label: 'Writing Stats', action: () => store.setWritingStatsOpen(!store.isWritingStatsOpen) },
         { divider: true },
-        { label: 'AI Analysis', action: () => setIsAnalysisOpen(!isAnalysisOpen) },
+        { label: 'AI Analysis', action: () => store.toggleAnalysis() },
         { divider: true },
         { label: 'Full Screen', action: () => document.documentElement.requestFullscreen?.() },
       ]
@@ -139,7 +117,7 @@ export const createMenus = (
       id: 'production', label: 'Production',
       items: [
         { label: 'Scene Numbers...', icon: pluginConfig.sceneNumbers.enabled ? '✓' : '', action: () => pluginConfig.sceneNumbers.toggle() },
-        { label: 'Revision Mode...', action: () => setIsRevisionPanelOpen(true) },
+        { label: 'Revision Mode...', action: () => store.setRevisionPanelOpen(true) },
         { divider: true },
         { label: 'Lock Scenes...', icon: '🔒', action: () => dispatchCommand('SCENE_LOCK_PANEL') },
         { label: 'Omit Scene', icon: '⊘', action: () => dispatchCommand('OMIT_SCENE') },
@@ -153,9 +131,9 @@ export const createMenus = (
     {
       id: 'tools', label: 'Tools',
       items: [
-        { label: 'AI Assistant', icon: '✨', action: () => setIsSidebarOpen(true) },
-        { label: 'Generate Scene...', action: () => setIsSidebarOpen(true) },
-        { label: 'Improve Dialogue...', action: () => setIsSidebarOpen(true) },
+        { label: 'AI Assistant', icon: '✨', action: () => store.setSidebarOpen(true) },
+        { label: 'Generate Scene...', action: () => store.setSidebarOpen(true) },
+        { label: 'Improve Dialogue...', action: () => store.setSidebarOpen(true) },
         { divider: true },
         { label: 'Spelling...', shortcut: 'F7', action: () => dispatchCommand('SPELLING') },
         { label: 'Thesaurus...', shortcut: 'Shift+F7', action: () => dispatchCommand('THESAURUS') },
@@ -165,7 +143,7 @@ export const createMenus = (
         { divider: true },
         { label: 'Bookmarks', shortcut: 'Ctrl+Shift+B', action: () => dispatchCommand('BOOKMARKS') },
         { divider: true },
-        { label: 'Preferences...', action: () => dispatchCommand('PREFERENCES') },
+        { label: 'Preferences...', action: () => store.setPreferencesOpen(true) },
         { divider: true },
         { label: 'Speaking Mode...', icon: '🗣️', action: () => dispatchCommand('SPEAKING_MODE') },
         { label: 'Character Highlighting...', icon: '🔦', action: () => dispatchCommand('CHARACTER_HIGHLIGHT') },
@@ -175,7 +153,7 @@ export const createMenus = (
     {
       id: 'help', label: 'Help',
       items: [
-        { label: 'Keyboard Shortcuts', shortcut: 'Ctrl+/', action: () => setIsKeyboardShortcutsOpen(true) },
+        { label: 'Keyboard Shortcuts', shortcut: 'Ctrl+/', action: () => store.setKeyboardShortcutsOpen(true) },
         { label: 'Documentation', action: () => window.open('https://cinema-os.com/docs', '_blank') },
         { divider: true },
         { label: 'About Cinema OS', action: () => toast.success("Cinema OS v0.1.0", { description: "Agentic Script-To-Film Platform" }) },

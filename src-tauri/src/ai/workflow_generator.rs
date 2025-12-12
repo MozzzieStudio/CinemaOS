@@ -31,6 +31,7 @@ pub struct WorkflowRequest {
     pub seed: Option<i64>,
     pub input_image: Option<String>,
     pub token_context: Option<String>,
+    pub force_local: Option<bool>, // User override
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
@@ -47,7 +48,11 @@ pub struct GeneratedWorkflow {
 /// Generate a ComfyUI workflow JSON from a request
 pub fn generate_workflow(request: &WorkflowRequest) -> GeneratedWorkflow {
     // Determine if we should use local or cloud
-    let is_local = is_local_model(&request.model);
+    // 1. Respect User Force Override
+    // 2. If no override, check if model is downloaded locally
+    let is_local = request
+        .force_local
+        .unwrap_or_else(|| is_local_model(&request.model));
 
     let workflow = if is_local {
         generate_local_workflow(request)
@@ -65,11 +70,8 @@ pub fn generate_workflow(request: &WorkflowRequest) -> GeneratedWorkflow {
 }
 
 fn is_local_model(model: &str) -> bool {
-    // Check if model is local (downloaded) or cloud-only
-    matches!(
-        model.to_lowercase().as_str(),
-        "sdxl" | "flux-local" | "sd15" | "sd21"
-    )
+    // Check if model weights exist on disk
+    crate::installer::downloader::is_model_downloaded(model)
 }
 
 fn estimate_credits(request: &WorkflowRequest, is_local: bool) -> f32 {
@@ -100,7 +102,8 @@ fn generate_local_workflow(request: &WorkflowRequest) -> Value {
     match request.workflow_type {
         WorkflowType::TextToImage => generate_t2i_local(request),
         WorkflowType::ImageToImage => generate_i2i_local(request),
-        _ => generate_t2i_local(request), // Fallback
+        WorkflowType::TextToVideo => generate_t2v_local(request),
+        WorkflowType::ImageToVideo => generate_i2v_local(request),
     }
 }
 
@@ -111,7 +114,7 @@ fn generate_t2i_local(request: &WorkflowRequest) -> Value {
 
     json!({
         "3": {
-            "class_type": "KSampler",
+            "class_type": "CinemaOS_KSampler",
             "inputs": {
                 "cfg": cfg,
                 "denoise": 1.0,
@@ -126,13 +129,20 @@ fn generate_t2i_local(request: &WorkflowRequest) -> Value {
             }
         },
         "4": {
-            "class_type": "CheckpointLoaderSimple",
+            "class_type": "CinemaOS_CheckpointLoader",
             "inputs": {
-                "ckpt_name": format!("{}.safetensors", request.model)
+                "ckpt_name": match request.model.as_str() {
+                    "flux-schnell" => "flux1-schnell.safetensors".to_string(),
+                    "flux-2-schnell" => "flux2-schnell.safetensors".to_string(),
+                    "sdxl-base" => "sd_xl_base_1.0.safetensors".to_string(),
+                    "wan-2.1-14b" => "wan2.1_14b.safetensors".to_string(),
+                    "wan-2.1-t2v-14b" => "wan2.1_t2v_14b.safetensors".to_string(),
+                    _ => format!("{}.safetensors", request.model),
+                }
             }
         },
         "5": {
-            "class_type": "EmptyLatentImage",
+            "class_type": "CinemaOS_EmptyLatent",
             "inputs": {
                 "batch_size": 1,
                 "height": request.height,
@@ -140,28 +150,28 @@ fn generate_t2i_local(request: &WorkflowRequest) -> Value {
             }
         },
         "6": {
-            "class_type": "CLIPTextEncode",
+            "class_type": "CinemaOS_CLIPTextEncode",
             "inputs": {
                 "clip": ["4", 1],
                 "text": request.prompt
             }
         },
         "7": {
-            "class_type": "CLIPTextEncode",
+            "class_type": "CinemaOS_CLIPTextEncode",
             "inputs": {
                 "clip": ["4", 1],
                 "text": request.negative_prompt.as_deref().unwrap_or("")
             }
         },
         "8": {
-            "class_type": "VAEDecode",
+            "class_type": "CinemaOS_VAEDecode",
             "inputs": {
                 "samples": ["3", 0],
                 "vae": ["4", 2]
             }
         },
         "9": {
-            "class_type": "SaveImage",
+            "class_type": "CinemaOS_SaveImage",
             "inputs": {
                 "filename_prefix": "CinemaOS",
                 "images": ["8", 0]
@@ -172,8 +182,88 @@ fn generate_t2i_local(request: &WorkflowRequest) -> Value {
 
 fn generate_i2i_local(request: &WorkflowRequest) -> Value {
     // Similar to t2i but with image input
-    // Simplified for now
+    // Simplified for now - assumes LoadImage node would be added
     generate_t2i_local(request)
+}
+
+fn generate_t2v_local(request: &WorkflowRequest) -> Value {
+    // Adapter for Video Workflows (Wan 2.1, etc.)
+    // Uses batch_size as frame count for latent-based video models
+    let seed = request.seed.unwrap_or(-1);
+    let steps = request.steps.unwrap_or(30); // Video usually needs more steps
+    let cfg = request.cfg_scale.unwrap_or(6.0);
+
+    // Default to 81 frames (~5s at 16fps) for Wan if not specified
+    // In a real implementation we'd grab this from settings
+    let frames = 81;
+
+    json!({
+        "3": {
+            "class_type": "CinemaOS_KSampler",
+            "inputs": {
+                "cfg": cfg,
+                "denoise": 1.0,
+                "latent_image": ["5", 0],
+                "model": ["4", 0],
+                "negative": ["7", 0],
+                "positive": ["6", 0], // Wan 2.1 T2V often needs VideoLinearCFG, but we mock with std
+                "sampler_name": "euler_ancestral", // Better for video
+                "scheduler": "simple",
+                "seed": seed,
+                "steps": steps
+            }
+        },
+        "4": {
+            "class_type": "CinemaOS_CheckpointLoader",
+            "inputs": {
+                "ckpt_name": match request.model.as_str() {
+                    "wan-2.1-t2v-14b" => "wan2.1_t2v_14b.safetensors".to_string(),
+                    _ => format!("{}.safetensors", request.model),
+                }
+            }
+        },
+        "5": {
+            "class_type": "CinemaOS_EmptyLatent",
+            "inputs": {
+                "batch_size": frames, // Use batch as frames
+                "height": request.height,
+                "width": request.width
+            }
+        },
+        "6": {
+            "class_type": "CinemaOS_CLIPTextEncode",
+            "inputs": {
+                "clip": ["4", 1],
+                "text": request.prompt
+            }
+        },
+        "7": {
+            "class_type": "CinemaOS_CLIPTextEncode",
+            "inputs": {
+                "clip": ["4", 1],
+                "text": request.negative_prompt.as_deref().unwrap_or("watermark, text, deformed")
+            }
+        },
+        "8": {
+            "class_type": "CinemaOS_VAEDecode",
+            "inputs": {
+                "samples": ["3", 0],
+                "vae": ["4", 2]
+            }
+        },
+        "9": {
+            "class_type": "CinemaOS_SaveImage", // Will save sequence of images
+            "inputs": {
+                "filename_prefix": "CinemaOS_Video",
+                "images": ["8", 0]
+            }
+        }
+    })
+}
+
+fn generate_i2v_local(request: &WorkflowRequest) -> Value {
+    // Placeholder - Image 2 Video is complex locally (needs LoadImage + VAEEncode)
+    generate_t2v_local(request)
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -183,6 +273,7 @@ fn generate_i2i_local(request: &WorkflowRequest) -> Value {
 fn generate_cloud_workflow(request: &WorkflowRequest) -> Value {
     match request.workflow_type {
         WorkflowType::TextToImage => generate_t2i_cloud(request),
+        WorkflowType::TextToVideo => generate_t2v_cloud(request), // Added mapping
         WorkflowType::ImageToVideo => generate_i2v_cloud(request),
         _ => generate_t2i_cloud(request),
     }
@@ -217,6 +308,28 @@ fn generate_t2i_cloud(request: &WorkflowRequest) -> Value {
                 "image": ["1", 0],
                 "token_type": "shot",
                 "token_name": ""
+            }
+        }
+    })
+}
+
+fn generate_t2v_cloud(request: &WorkflowRequest) -> Value {
+    json!({
+        "1": {
+            "class_type": "FalProvider",
+            "inputs": {
+                "prompt": request.prompt,
+                "model": "kling-video-2.6", // Default cloud video model
+                "width": request.width,
+                "height": request.height,
+                "seconds": 5
+            }
+        },
+        "2": {
+            "class_type": "CreditTracker",
+            "inputs": {
+                "credits_used": ["1", 1],
+                "model_name": "kling-video-2.6"
             }
         }
     })
@@ -271,6 +384,7 @@ pub fn parse_agent_request(agent_output: &str) -> Option<WorkflowRequest> {
         seed: None,
         input_image: None,
         token_context: None,
+        force_local: None,
     })
 }
 
@@ -292,6 +406,7 @@ mod tests {
             seed: None,
             input_image: None,
             token_context: None,
+            force_local: None,
         };
 
         let result = generate_workflow(&request);
@@ -313,6 +428,7 @@ mod tests {
             seed: None,
             input_image: None,
             token_context: None,
+            force_local: None,
         };
 
         let result = generate_workflow(&request);

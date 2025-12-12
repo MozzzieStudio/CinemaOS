@@ -6,7 +6,7 @@
 //! - Credit usage tracking
 
 use axum::{
-    extract::{Path, Query, State},
+    extract::{Path, State},
     http::StatusCode,
     response::Json,
     routing::{get, post},

@@ -1,10 +1,9 @@
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
 // Constants mirroring the industry constraints (Courier Prime 12pt @ 72dpi equivalent)
 // 10 chars per inch. 6 lines per inch.
 const LINES_PER_PAGE: usize = 54;
-const PAGE_WIDTH_CHARS: usize = 60; // Standard Action width roughly
+// const PAGE_WIDTH_CHARS: usize = 60; // Standard Action width roughly (unused)
 
 // Element Margins/Widths (in characters, based on left-margin + width)
 // Simplification: We only care about the max characters per line for wrapping.
@@ -45,7 +44,6 @@ pub fn calculate_lines_for_element(element: &ScriptElement) -> usize {
 
     // Strict wrapping logic
     // We treat newlines in text as forced breaks
-    let mut total_lines = 0;
 
     // We also need to add top-margin based on element type (e.g. Dialogue has 0 if prev is Character, etc.)
     // But this function just calculates the "visual height" of the element itself text-wise.
@@ -54,7 +52,7 @@ pub fn calculate_lines_for_element(element: &ScriptElement) -> usize {
     // Textwrap is great, but we want strict character count wrapping for Courier.
     // textwrap::wrap uses sophisticated algos, but basic is fine.
     let wrapped = textwrap::wrap(element.text.as_str(), width);
-    total_lines = wrapped.len();
+    let mut total_lines = wrapped.len();
 
     // Ensure at least 1 line if empty?
     if total_lines == 0 {

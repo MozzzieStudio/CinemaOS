@@ -40,8 +40,7 @@ pub fn detect_hardware() -> HardwareInfo {
 
     let cpu_cores = sys_info::cpu_num().unwrap_or(4);
 
-    // GPU detection - placeholder for now
-    // TODO: Use WGPU adapter or nvidia-smi/rocm-smi
+    // GPU detection using WGPU with fallbacks
     let (gpu_name, gpu_vendor, vram_gb) = detect_gpu();
 
     HardwareInfo {
@@ -55,30 +54,8 @@ pub fn detect_hardware() -> HardwareInfo {
 }
 
 fn detect_gpu() -> (Option<String>, Option<String>, u32) {
-    // Try nvidia-smi first
-    #[cfg(windows)]
-    {
-        if let Ok(output) = std::process::Command::new("nvidia-smi")
-            .args([
-                "--query-gpu=name,memory.total",
-                "--format=csv,noheader,nounits",
-            ])
-            .output()
-        {
-            if output.status.success() {
-                let stdout = String::from_utf8_lossy(&output.stdout);
-                let parts: Vec<&str> = stdout.trim().split(',').collect();
-                if parts.len() >= 2 {
-                    let name = parts[0].trim().to_string();
-                    let vram_mb: u32 = parts[1].trim().parse().unwrap_or(0);
-                    return (Some(name), Some("NVIDIA".to_string()), vram_mb / 1024);
-                }
-            }
-        }
-    }
-
-    // Fallback - no GPU detected
-    (None, None, 0)
+    use crate::installer::gpu_detector;
+    gpu_detector::detect_gpu()
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

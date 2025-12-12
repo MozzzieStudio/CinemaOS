@@ -2,6 +2,8 @@
 //!
 //! Typed errors using thiserror for better debugging and handling.
 
+pub mod codes;
+
 use thiserror::Error;
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -241,6 +243,25 @@ pub enum AppError {
 
     #[error("Agent: {0}")]
     Agent(#[from] AgentError),
+
+    // ComfyUI installation & process management errors
+    #[error("Installation failed: {0}")]
+    Installation(String),
+
+    #[error("Process start failed: {0}")]
+    ProcessStart(String),
+
+    #[error("Process stop failed: {0}")]
+    ProcessStop(String),
+
+    #[error("Model download failed: {0}")]
+    ModelDownload(String),
+
+    #[error("API request failed: {0}")]
+    ApiRequest(String),
+
+    #[error("API response error: {0}")]
+    ApiResponse(String),
 }
 
 // For Tauri command compatibility

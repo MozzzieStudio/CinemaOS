@@ -172,35 +172,43 @@ pub async fn extract_tokens_from_script(
     _project_id: String,
     script_content: String,
 ) -> Result<ExtractedTokens, String> {
-    // TODO: Integrate with AI (Fast Path → Gemini/Claude)
-    // For now, return a basic regex-based extraction
+    // Improved extraction: NER-style regex-based
+    // Fast path using regex patterns (future: integrate Gemini/Claude for deep analysis)
 
     use crate::vault::tokens::ExtractedEntity;
+    use std::collections::HashMap;
 
-    let mut characters = Vec::new();
-    let mut locations = Vec::new();
+    let mut characters: HashMap<String, ExtractedEntity> = HashMap::new();
+    let mut locations: HashMap<String, ExtractedEntity> = HashMap::new();
+    let mut props: HashMap<String, ExtractedEntity> = HashMap::new();
 
-    // Simple extraction: look for CHARACTER: patterns and INT./EXT. patterns
-    for line in script_content.lines() {
+    let lines: Vec<&str> = script_content.lines().collect();
+
+    for (i, line) in lines.iter().enumerate() {
         let trimmed = line.trim();
 
-        // Character detection (ALL CAPS name followed by dialogue)
+        // Character detection (ALL CAPS name, 2-30 chars, followed by dialogue or parenthetical)
         if trimmed
             .chars()
-            .all(|c| c.is_uppercase() || c.is_whitespace())
-            && trimmed.len() > 2
-            && trimmed.len() < 30
+            .all(|c| c.is_uppercase() || c.is_whitespace() || c == '.')
+            && trimmed.len() > 1
+            && trimmed.len() < 35
             && !trimmed.starts_with("INT")
             && !trimmed.starts_with("EXT")
+            && !trimmed.starts_with("FADE")
+            && !trimmed.ends_with(':')
         {
-            let name = trimmed.to_string();
-            if !characters.iter().any(|c: &ExtractedEntity| c.name == name) {
-                characters.push(ExtractedEntity {
-                    name: name.clone(),
-                    description: format!("Character: {}", name),
-                    mentions: 1,
-                    first_appearance: "Script".into(),
-                });
+            let name = trimmed.replace('.', "").trim().to_string();
+            if !name.is_empty() && name.split_whitespace().count() <= 3 {
+                characters
+                    .entry(name.clone())
+                    .and_modify(|e| e.mentions += 1)
+                    .or_insert(ExtractedEntity {
+                        name: name.clone(),
+                        description: format!("Character appearing in the script"),
+                        mentions: 1,
+                        first_appearance: format!("Line {}", i + 1),
+                    });
             }
         }
 
@@ -212,28 +220,81 @@ pub async fn extract_tokens_from_script(
                 .split('-')
                 .next()
                 .unwrap_or("")
+                .split('.')
+                .next()
+                .unwrap_or("")
                 .trim()
                 .to_string();
 
-            if !location.is_empty()
-                && !locations
-                    .iter()
-                    .any(|l: &ExtractedEntity| l.name == location)
-            {
-                locations.push(ExtractedEntity {
-                    name: location.clone(),
-                    description: format!("Location: {}", location),
-                    mentions: 1,
-                    first_appearance: trimmed.to_string(),
-                });
+            if !location.is_empty() {
+                locations
+                    .entry(location.clone())
+                    .and_modify(|e| e.mentions += 1)
+                    .or_insert(ExtractedEntity {
+                        name: location.clone(),
+                        description: format!("Location in the script"),
+                        mentions: 1,
+                        first_appearance: trimmed.to_string(),
+                    });
+            }
+        }
+
+        // Prop detection (simple heuristic: objects in action lines)
+        // Look for common prop keywords in action lines
+        if !trimmed.is_empty()
+            && !trimmed
+                .chars()
+                .all(|c| c.is_uppercase() || c.is_whitespace())
+            && !trimmed.starts_with("INT")
+            && !trimmed.starts_with("EXT")
+            && !trimmed.starts_with('(')
+        {
+            // Common prop indicators
+            let prop_keywords = [
+                "gun",
+                "weapon",
+                "phone",
+                "car",
+                "door",
+                "key",
+                "letter",
+                "photo",
+                "photograph",
+                "ring",
+                "watch",
+                "briefcase",
+                "suitcase",
+                "laptop",
+                "computer",
+                "bottle",
+                "glass",
+                "knife",
+                "sword",
+                "camera",
+                "book",
+            ];
+
+            for keyword in &prop_keywords {
+                if trimmed.to_lowercase().contains(keyword) {
+                    let prop_name = keyword.to_uppercase();
+                    props
+                        .entry(prop_name.clone())
+                        .and_modify(|e| e.mentions += 1)
+                        .or_insert(ExtractedEntity {
+                            name: prop_name.clone(),
+                            description: format!("Prop mentioned in action"),
+                            mentions: 1,
+                            first_appearance: format!("Line {}", i + 1),
+                        });
+                }
             }
         }
     }
 
     Ok(ExtractedTokens {
-        characters,
-        locations,
-        props: Vec::new(), // TODO: AI extraction for props
+        characters: characters.into_values().collect(),
+        locations: locations.into_values().collect(),
+        props: props.into_values().collect(),
     })
 }
 

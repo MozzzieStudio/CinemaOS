@@ -1,56 +1,109 @@
 //! Tauri Commands for ComfyUI
 //!
-//! Exposes ComfyUI functionality to the frontend
+//! Exposes ComfyUI installation, process management, and execution to the frontend
 
-use crate::ai::comfyui_client::{get_client, ConnectionStatus, ExecutionResult};
+use crate::comfyui::{self, ComfyUIConfig, ComfyUIStatus};
+use tauri::Emitter;
 
-/// Check if ComfyUI is running
+/// Get ComfyUI status (installation + running state)
 #[tauri::command]
 #[specta::specta]
-pub async fn comfyui_ping() -> Result<bool, String> {
-    get_client().ping().await
+pub async fn get_comfyui_status() -> Result<ComfyUIStatus, String> {
+    let config = ComfyUIConfig::default();
+
+    Ok(ComfyUIStatus {
+        installed: comfyui::installer::is_installed(),
+        running: comfyui::process::is_running(&config.host, config.port),
+        version: comfyui::installer::get_version(),
+        install_path: config.install_path.display().to_string(),
+    })
 }
 
-/// Get ComfyUI connection status
+/// Install ComfyUI via UV + comfy-cli
 #[tauri::command]
 #[specta::specta]
-pub async fn comfyui_status() -> ConnectionStatus {
-    get_client().status().await
-}
+pub async fn install_comfyui(window: tauri::Window) -> Result<String, String> {
+    let install_path = comfyui::get_default_install_path();
 
-/// Get available models from ComfyUI
-#[tauri::command]
-#[specta::specta]
-pub async fn comfyui_get_models() -> Result<Vec<String>, String> {
-    get_client().get_models().await
-}
+    // Emit progress events
+    window
+        .emit("comfyui-install-progress", "Installing UV...")
+        .ok();
 
-/// Execute a workflow (prompt as JSON string)
-#[tauri::command]
-#[specta::specta]
-pub async fn comfyui_execute(prompt_json: String) -> Result<ExecutionResult, String> {
-    let prompt: serde_json::Value =
-        serde_json::from_str(&prompt_json).map_err(|e| format!("Invalid JSON prompt: {}", e))?;
-    get_client().execute(prompt, None).await
-}
-
-/// Get execution history (returns JSON string)
-#[tauri::command]
-#[specta::specta]
-pub async fn comfyui_get_history(prompt_id: String) -> Result<String, String> {
-    let history = get_client().get_history(&prompt_id).await?;
-    serde_json::to_string(&history).map_err(|e| format!("Failed to serialize: {}", e))
-}
-
-/// Get generated image
-#[tauri::command]
-#[specta::specta]
-pub async fn comfyui_get_image(
-    filename: String,
-    subfolder: String,
-    folder_type: String,
-) -> Result<Vec<u8>, String> {
-    get_client()
-        .get_image(&filename, &subfolder, &folder_type)
+    // Install ComfyUI
+    comfyui::installer::install_comfyui(install_path.clone())
         .await
+        .map_err(|e| e.to_string())?;
+
+    window
+        .emit(
+            "comfyui-install-progress",
+            "Downloading essential models...",
+        )
+        .ok();
+
+    // Download FLUX Schnell
+    comfyui::models::download_essential_models(&install_path)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    window.emit("comfyui-install-complete", ()).ok();
+
+    Ok(install_path.display().to_string())
+}
+
+/// Start ComfyUI headless server
+#[tauri::command]
+#[specta::specta]
+pub async fn start_comfyui() -> Result<(), String> {
+    let config = ComfyUIConfig::default();
+
+    comfyui::process::start_comfyui(config.install_path, &config.host, config.port)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// Stop ComfyUI server
+#[tauri::command]
+#[specta::specta]
+pub async fn stop_comfyui() -> Result<(), String> {
+    comfyui::process::stop_comfyui()
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// Generate image using FLUX Schnell text-to-image
+#[tauri::command]
+#[specta::specta]
+pub async fn generate_image(
+    prompt: String,
+    seed: Option<u64>,
+    width: Option<u32>,
+    height: Option<u32>,
+) -> Result<String, String> {
+    let config = ComfyUIConfig::default();
+    let client = comfyui::client::ComfyUIClient::new(&config.host, config.port);
+
+    // Create FLUX Schnell workflow
+    let workflow = comfyui::workflows::flux_schnell_text2img(&prompt, seed, width, height);
+
+    // Queue workflow for execution
+    let response = client
+        .queue_prompt(workflow)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    Ok(response.prompt_id)
+}
+
+/// Get system stats from ComfyUI
+#[tauri::command]
+#[specta::specta]
+pub async fn get_comfyui_stats() -> Result<String, String> {
+    let config = ComfyUIConfig::default();
+    let client = comfyui::client::ComfyUIClient::new(&config.host, config.port);
+
+    let stats = client.get_system_stats().await.map_err(|e| e.to_string())?;
+
+    serde_json::to_string(&stats).map_err(|e| format!("Failed to serialize stats: {}", e))
 }

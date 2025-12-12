@@ -1,8 +1,10 @@
 pub mod ai;
+pub mod comfyui;
 pub mod commands;
 pub mod errors;
 pub mod graphics;
 pub mod installer;
+pub mod observability;
 pub mod pagination;
 pub mod sync;
 pub mod vault;
@@ -77,19 +79,16 @@ pub fn run() {
             commands::files::save_file_to_path,
             commands::files::export_pdf_dialog,
             // ComfyUI commands
-            commands::comfyui::comfyui_ping,
-            commands::comfyui::comfyui_status,
-            commands::comfyui::comfyui_get_models,
-            commands::comfyui::comfyui_execute,
-            commands::comfyui::comfyui_get_history,
-            commands::comfyui::comfyui_get_image,
-            // Installer commands
+            commands::comfyui::get_comfyui_status,
+            commands::comfyui::install_comfyui,
+            commands::comfyui::start_comfyui,
+            commands::comfyui::stop_comfyui,
+            commands::comfyui::generate_image,
+            commands::comfyui::get_comfyui_stats,
+            //Installer commands
             commands::installer::get_install_state,
             commands::installer::is_system_ready,
             commands::installer::run_installation,
-            commands::installer::start_comfyui,
-            commands::installer::stop_comfyui,
-            commands::installer::is_comfyui_running,
             // Hardware detection
             commands::installer::get_hardware_info,
             commands::installer::get_all_model_recommendations,
@@ -111,7 +110,15 @@ pub fn run() {
             commands::agents::execute_agent_action,
             commands::agents::execute_agent_actions,
             commands::agents::route_message_to_agent,
-            commands::agents::get_agent_roles
+            commands::agents::get_agent_roles,
+            // AI Crew (new)
+            commands::crew::chat_with_crew,
+            commands::crew::get_crew_agents,
+            commands::crew::get_available_models,
+            // Settings
+            commands::settings::save_api_key,
+            commands::settings::get_api_key_status,
+            commands::settings::delete_api_key,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

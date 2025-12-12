@@ -3,7 +3,6 @@
 //! Native file dialog operations for Open/Save/Export
 
 use std::fs;
-use std::path::PathBuf;
 use tauri::AppHandle;
 
 /// Open a file using native dialog

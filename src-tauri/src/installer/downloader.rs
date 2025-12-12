@@ -35,6 +35,13 @@ pub struct DownloadProgress {
 // MODEL SOURCES
 // ═══════════════════════════════════════════════════════════════════════════════
 
+use once_cell::sync::Lazy;
+use std::sync::RwLock;
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MODEL SOURCES
+// ═══════════════════════════════════════════════════════════════════════════════
+
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 pub struct ModelSource {
     pub id: String,
@@ -43,10 +50,19 @@ pub struct ModelSource {
     pub filename: String,
     pub size_bytes: u64,
     pub checksum_sha256: Option<String>,
+    pub requires_auth: bool,
 }
 
-/// Get download sources for known models
+static MODEL_SOURCES: Lazy<RwLock<Vec<ModelSource>>> =
+    Lazy::new(|| RwLock::new(get_hardcoded_sources()));
+
+/// Get download sources for known models (from cache/hardcoded)
 pub fn get_model_sources() -> Vec<ModelSource> {
+    MODEL_SOURCES.read().unwrap().clone()
+}
+
+/// Helper: Hardcoded sources as fallback
+fn get_hardcoded_sources() -> Vec<ModelSource> {
     vec![
         // ── Checkpoints for ComfyUI ──
         ModelSource {
@@ -56,6 +72,7 @@ pub fn get_model_sources() -> Vec<ModelSource> {
             filename: "sd_xl_base_1.0.safetensors".into(),
             size_bytes: 6_938_040_682,
             checksum_sha256: None,
+            requires_auth: false,
         },
         ModelSource {
             id: "flux-schnell".into(),
@@ -64,10 +81,94 @@ pub fn get_model_sources() -> Vec<ModelSource> {
             filename: "flux1-schnell.safetensors".into(),
             size_bytes: 23_800_000_000,
             checksum_sha256: None,
+            requires_auth: false,
         },
-        // Note: Most models require HuggingFace auth or are very large
-        // In production, we'd use Ollama for LLMs and HuggingFace CLI for others
+        // ── Wan 2.1 (Alibaba) ──
+        ModelSource {
+            id: "wan-2.1-t2v-14b".into(),
+            name: "Wan 2.1 T2V 14B".into(),
+            download_url: "https://huggingface.co/Wan-AI/Wan2.1-T2V-14B/resolve/main/model.safetensors".into(),
+            filename: "wan2.1_t2v_14b.safetensors".into(),
+            size_bytes: 14_500_000_000,
+            checksum_sha256: None,
+            requires_auth: true,
+        },
+        ModelSource {
+            id: "wan-2.1-14b".into(),
+            name: "Wan 2.1 Video 14B".into(),
+            download_url: "https://huggingface.co/Wan-AI/Wan2.1-T2V-14B/resolve/main/wan2.1_14b.safetensors".into(),
+            filename: "wan2.1_14b.safetensors".into(),
+            size_bytes: 28_000_000_000,
+            checksum_sha256: None,
+            requires_auth: false,
+        },
+        // Z-Image Turbo
+        ModelSource {
+            id: "z-image-turbo".into(),
+            name: "Z-Image Turbo".into(),
+            download_url: "https://huggingface.co/Tongyi-MAI/Z-Image-Turbo/resolve/main/z_image_turbo.safetensors".into(),
+            filename: "z_image_turbo.safetensors".into(),
+            size_bytes: 12_000_000_000,
+            checksum_sha256: None,
+            requires_auth: false,
+        },
+        // ── SAM 3 (Meta) ──
+        ModelSource {
+            id: "sam-3-large".into(),
+            name: "SAM 3 Large".into(),
+            download_url: "https://huggingface.co/facebookresearch/sam3/resolve/main/sam3_large.safetensors".into(),
+            filename: "sam3_large.safetensors".into(),
+            size_bytes: 2_400_000_000,
+            checksum_sha256: None,
+            requires_auth: false,
+        },
+        // ── Llama 4 (Meta) - REQUIRES AUTH ──
+        ModelSource {
+            id: "llama-4-70b-quant".into(),
+            name: "Llama 4 70B (Q4_K_M)".into(),
+            download_url: "https://huggingface.co/meta-llama/Llama-4-70b-GGUF/resolve/main/llama-4-70b.Q4_K_M.gguf".into(),
+            filename: "llama-4-70b.Q4_K_M.gguf".into(),
+            size_bytes: 42_000_000_000,
+            checksum_sha256: None,
+            requires_auth: true,
+        },
     ]
+}
+
+/// Fetch the latest model manifest from the web
+pub async fn refresh_model_manifest(url: Option<String>) -> Result<(), String> {
+    let manifest_url =
+        url.unwrap_or_else(|| "https://api.cinemaos.com/v1/models/manifest.json".to_string());
+    tracing::info!("Refreshing model manifest from {}", manifest_url);
+
+    let client = reqwest::Client::new();
+    let response = client
+        .get(&manifest_url)
+        .send()
+        .await
+        .map_err(|e| format!("Failed to fetch manifest: {}", e))?;
+
+    if !response.status().is_success() {
+        return Err(format!(
+            "Manifest fetch failed with status: {}",
+            response.status()
+        ));
+    }
+
+    let dynamic_sources: Vec<ModelSource> = response
+        .json()
+        .await
+        .map_err(|e| format!("Failed to parse manifest: {}", e))?;
+
+    // Update the lock
+    if let Ok(mut sources) = MODEL_SOURCES.write() {
+        *sources = dynamic_sources;
+        tracing::info!("Model manifest updated successfully");
+    } else {
+        return Err("Failed to acquire write lock on MODEL_SOURCES".to_string());
+    }
+
+    Ok(())
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -78,7 +179,7 @@ pub fn get_model_sources() -> Vec<ModelSource> {
 pub fn get_model_path(model_id: &str, filename: &str) -> PathBuf {
     let models_dir = get_models_dir();
     let category_dir = match model_id {
-        id if id.contains("sdxl") || id.contains("flux") => "checkpoints",
+        id if id.contains("sdxl") || id.contains("flux") || id.contains("wan") => "checkpoints",
         id if id.contains("llama") || id.contains("gemma") => "llm",
         id if id.contains("whisper") => "audio",
         id if id.contains("sam") => "segmentation",
@@ -127,16 +228,27 @@ pub async fn download_model(
             .map_err(|e| format!("Failed to create directory: {}", e))?;
     }
 
-    // Skip if already downloaded
+    // Skip if already downloaded and verified
     if dest_path.exists() {
-        progress_callback(DownloadProgress {
-            model_id: model_id.to_string(),
-            status: DownloadStatus::Completed,
-            downloaded_bytes: source.size_bytes,
-            total_bytes: source.size_bytes,
-            percent: 100.0,
-        });
-        return Ok(dest_path);
+        if let Ok(metadata) = std::fs::metadata(&dest_path) {
+            // loose check: if file is at least 90% of expected size, we might want to be careful
+            // but for now, exact match or re-download is safer for models that must be exact.
+            // However, some huggingface models might vary slightly if metadata changes.
+            // Let's stick to exact match for now as these are static assets.
+            if metadata.len() == source.size_bytes {
+                progress_callback(DownloadProgress {
+                    model_id: model_id.to_string(),
+                    status: DownloadStatus::Completed,
+                    downloaded_bytes: source.size_bytes,
+                    total_bytes: source.size_bytes,
+                    percent: 100.0,
+                });
+                return Ok(dest_path);
+            } else {
+                // File exists but wrong size, likely corrupt or partial. Proceed to re-download.
+                // Ideally logging here would be good.
+            }
+        }
     }
 
     progress_callback(DownloadProgress {
@@ -149,8 +261,23 @@ pub async fn download_model(
 
     // Download with progress
     let client = reqwest::Client::new();
-    let response = client
-        .get(&source.download_url)
+    let mut request = client.get(&source.download_url);
+
+    // Add Auth Header if required
+    if source.requires_auth {
+        use keyring::Entry;
+        let entry = Entry::new("cinemaos", "hf_token").map_err(|e| e.to_string())?;
+        if let Ok(token) = entry.get_password() {
+            request = request.header("Authorization", format!("Bearer {}", token));
+        } else {
+            return Err(format!(
+                "Model {} requires authentication. Please set your HuggingFace Token in Settings.",
+                source.name
+            ));
+        }
+    }
+
+    let response = request
         .send()
         .await
         .map_err(|e| format!("Download failed: {}", e))?;
@@ -197,6 +324,14 @@ pub async fn download_model(
 
 /// Download a model via Ollama (for LLMs)
 pub async fn download_via_ollama(model_name: &str) -> Result<(), String> {
+    // Sanitize input to prevent injection
+    if !model_name
+        .chars()
+        .all(|c| c.is_alphanumeric() || c == ':' || c == '.' || c == '-' || c == '_')
+    {
+        return Err("Invalid model name".into());
+    }
+
     use std::process::Stdio;
     use tokio::process::Command;
 

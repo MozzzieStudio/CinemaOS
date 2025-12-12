@@ -5,8 +5,10 @@
 pub mod agents;
 pub mod ai;
 pub mod comfyui;
+pub mod crew;
 pub mod files;
 pub mod installer;
+pub mod settings;
 pub mod tokens;
 pub mod workflow;
 

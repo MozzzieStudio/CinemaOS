@@ -242,6 +242,7 @@ impl AgentExecutor {
             seed: None,
             input_image: None,
             token_context: None,
+            force_local: None,
         };
 
         let workflow = generate_workflow(&request);
@@ -269,6 +270,7 @@ impl AgentExecutor {
             seed: None,
             input_image: None,
             token_context: None,
+            force_local: None,
         };
 
         let workflow = generate_workflow(&request);

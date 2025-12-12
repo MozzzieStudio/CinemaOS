@@ -12,7 +12,7 @@ import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
 import { AutoFocusPlugin } from "@lexical/react/LexicalAutoFocusPlugin";
 import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import { 
   $getRoot, $getSelection, $isRangeSelection, FORMAT_TEXT_COMMAND, $createTextNode, 
@@ -221,8 +221,8 @@ function FormatButton({ icon, label, shortcut, active, onClick }: { icon: string
       title={`${label} (${shortcut})`}
       className={`group relative flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150 ${
         active
-          ? "bg-gradient-to-r from-violet-600/25 to-purple-600/25 text-white ring-1 ring-violet-500/30 shadow-lg shadow-violet-500/10"
-          : "text-white/50 hover:text-white hover:bg-white/[0.05]"
+          ? "bg-linear-to-r from-violet-600/25 to-purple-600/25 text-white ring-1 ring-violet-500/30 shadow-lg shadow-violet-500/10"
+          : "text-white/50 hover:text-white hover:bg-white/5"
       }`}
     >
       <span className="text-base">{icon}</span>
@@ -232,43 +232,46 @@ function FormatButton({ icon, label, shortcut, active, onClick }: { icon: string
   );
 }
 
-function EditorContent(props: any) {
+function EditorContent({ sceneNumbersConfig, moresContinuedsConfig, onScriptContextChange }: ScriptEditorProps) {
   const [editor] = useLexicalComposerContext();
   
   const { 
-    activeFormat, setActiveFormat, wordCount, pageCount, setWordCount, setPageCount,
-    isNavigatorOpen, setIsNavigatorOpen, isBeatBoardOpen, setIsBeatBoardOpen,
-    isIndexCardsOpen, setIsIndexCardsOpen, isAnalysisOpen, setIsAnalysisOpen,
-    isExportOpen, setIsExportOpen,
+    isNavigatorOpen, setNavigatorOpen,
+    isBeatBoardOpen, setBeatBoardOpen,
+    isIndexCardsOpen, setIndexCardsOpen,
+    isAnalysisOpen, setAnalysisOpen,
+    isExportOpen, setExportOpen,
     isTypewriterEnabled, isFocusModeActive,
-    sceneNumbersConfig, moresContinuedsConfig,
-  } = props;
+    isReportsOpen, setReportsOpen,
+    isThesaurusOpen, setThesaurusOpen,
+    isCharRenameOpen, setCharRenameOpen, 
+    isTitlePageOpen, setTitlePageOpen,
+    isFindReplaceOpen, setFindReplaceOpen,
+    isBookmarksOpen, setBookmarksOpen,
+    isAltDialogueOpen, setAltDialogueOpen,
+    altDialogueData, setAltDialogueData,
+    notePopoverElementKey, setNotePopoverElementKey,
+    // Add New Panels from Store
+    isPreferencesOpen, setPreferencesOpen,
+    isRevisionPanelOpen, setRevisionPanelOpen,
+    isScriptCompareOpen, setScriptCompareOpen,
+    isSceneLockPanelOpen, setSceneLockPanelOpen,
+    isSpeakingModeOpen, setSpeakingModeOpen,
+    isVersionHistoryOpen, setVersionHistoryOpen,
+    isGoToOpen, setGoToOpen
+  } = useEditorStore();
 
-  // Local state
+  // Local Editor State (for UI status bar)
+  const [activeFormat, setActiveFormat] = useState("Action");
+  const [wordCount, setWordCount] = useState(0);
+  const [pageCount, setPageCount] = useState(1);
   const [isSpellCheckEnabled, setIsSpellCheckEnabled] = useState(true);
-  const [notePopoverElementKey, setNotePopoverElementKey] = useState<string | null>(null);
-  const [isFindReplaceOpen, setIsFindReplaceOpen] = useState(false);
   const [zoom, setZoom] = useState(100);
   
-  // Dialogs
-  const [isGoToOpen, setIsGoToOpen] = useState(false);
-  const [isTitlePageOpen, setIsTitlePageOpen] = useState(false);
-  const [isCharRenameOpen, setIsCharRenameOpen] = useState(false);
-  const [isReportsOpen, setIsReportsOpen] = useState(false);
-  const [isThesaurusOpen, setIsThesaurusOpen] = useState(false);
-  const [isBookmarksOpen, setIsBookmarksOpen] = useState(false);
+  // Dialogs (Local)
+
   
-  // New Dialogs State
-  const [isPreferencesOpen, setIsPreferencesOpen] = useState(false);
-  const [isRevisionPanelOpen, setIsRevisionPanelOpen] = useState(false);
-  const [isScriptCompareOpen, setIsScriptCompareOpen] = useState(false);
-  const [isSceneLockPanelOpen, setIsSceneLockPanelOpen] = useState(false);
-  const [isSpeakingModeOpen, setIsSpeakingModeOpen] = useState(false);
-  const [isVersionHistoryOpen, setIsVersionHistoryOpen] = useState(false);
-  const [isAltDialogueOpen, setIsAltDialogueOpen] = useState(false);
-  const [altDialogueData, setAltDialogueData] = useState<{nodeKey: string | null, currentText: string}>({ nodeKey: null, currentText: '' });
-  
-  // Title page data
+  // Title page data (Local for now)
   const [titlePageData, setTitlePageData] = useState({
     title: 'UNTITLED SCREENPLAY',
     writtenBy: '',
@@ -310,7 +313,7 @@ function EditorContent(props: any) {
     const handleAltDialoguePrompt = (e: CustomEvent) => {
       const { nodeKey, currentText } = e.detail;
       setAltDialogueData({ nodeKey, currentText });
-      setIsAltDialogueOpen(true);
+      setAltDialogueOpen(true);
     };
 
     window.addEventListener('open-note-popover', handleNotePopover as EventListener);
@@ -319,15 +322,15 @@ function EditorContent(props: any) {
       window.removeEventListener('open-note-popover', handleNotePopover as EventListener);
       window.removeEventListener('open-alt-dialogue-prompt', handleAltDialoguePrompt as EventListener);
     };
-  }, []);
+  }, [setAltDialogueData, setAltDialogueOpen, setNotePopoverElementKey]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'n') { e.preventDefault(); editor.dispatchCommand(ADD_NOTE_COMMAND, undefined); }
-      else if ((e.ctrlKey || e.metaKey) && e.key === 'g') { e.preventDefault(); setIsGoToOpen(true); }
-      else if ((e.ctrlKey || e.metaKey) && e.key === 'f' && !e.shiftKey) { e.preventDefault(); setIsFindReplaceOpen(true); }
-      else if (e.shiftKey && e.key === 'F7') { e.preventDefault(); setIsThesaurusOpen(true); }
-      else if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'b') { e.preventDefault(); setIsBookmarksOpen(prev => !prev); }
+      else if ((e.ctrlKey || e.metaKey) && e.key === 'g') { e.preventDefault(); setGoToOpen(true); }
+      else if ((e.ctrlKey || e.metaKey) && e.key === 'f' && !e.shiftKey) { e.preventDefault(); setFindReplaceOpen(true); }
+      else if (e.shiftKey && e.key === 'F7') { e.preventDefault(); setThesaurusOpen(true); }
+      else if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'b') { e.preventDefault(); setBookmarksOpen(prev => !prev); }
       else if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); editor.dispatchCommand(INSERT_PAGE_BREAK_COMMAND, undefined); }
       else if ((e.ctrlKey || e.metaKey) && e.key === 'd') { e.preventDefault(); editor.dispatchCommand(TOGGLE_DUAL_DIALOGUE_COMMAND, undefined); }
       // Alts Shortcuts
@@ -336,7 +339,7 @@ function EditorContent(props: any) {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [editor]);
+  }, [editor, setBookmarksOpen, setFindReplaceOpen, setThesaurusOpen]);
 
 
 
@@ -360,33 +363,33 @@ function EditorContent(props: any) {
             root.append(p);
           });
           break;
-        case 'EXPORT_FDX': setIsExportOpen(true); break;
-        case 'EXPORT_PDF': setIsExportOpen(true); break;
-        case 'IMPORT_FDX': /* usually handled via file input in ExportPanel, but if command comes from menu */ setIsExportOpen(true); break;
-        case 'FIND': setIsFindReplaceOpen(true); break;
+        case 'EXPORT_FDX': setExportOpen(true); break;
+        case 'EXPORT_PDF': setExportOpen(true); break;
+        case 'IMPORT_FDX': /* usually handled via file input in ExportPanel, but if command comes from menu */ setExportOpen(true); break;
+        case 'FIND': setFindReplaceOpen(true); break;
         case 'CUT': editor.dispatchCommand(CUT_COMMAND, null as any); break;
         case 'COPY': editor.dispatchCommand(COPY_COMMAND, null as any); break;
         case 'PASTE': editor.dispatchCommand(PASTE_COMMAND, null as any); break;
-        case 'SAVE': console.log("Saving..."); toast.success("Script Saved (Simulated)"); break;
-        case 'SAVE_AS': setIsExportOpen(true); break;
+        case 'SAVE': toast.success("Script Saved (Simulated)"); break;
+        case 'SAVE_AS': setExportOpen(true); break;
         case 'SPELLING': setIsSpellCheckEnabled(prev => !prev); toast.info(isSpellCheckEnabled ? 'Spell Check Disabled' : 'Spell Check Enabled'); break;
-        case 'GO_TO': setIsGoToOpen(true); break;
+        case 'GO_TO': setGoToOpen(true); break;
         case 'PAGE_BREAK': editor.dispatchCommand(INSERT_PAGE_BREAK_COMMAND, undefined); break;
-        case 'TITLE_PAGE': setIsTitlePageOpen(true); break;
-        case 'THESAURUS': setIsThesaurusOpen(true); break;
-        case 'REPORTS': setIsReportsOpen(true); break;
-        case 'CHARACTER_RENAME': setIsCharRenameOpen(true); break;
-        case 'BOOKMARKS': setIsBookmarksOpen(prev => !prev); break;
-        case 'PREFERENCES': setIsPreferencesOpen(true); break;
-        case 'REVISION_MODE': setIsRevisionPanelOpen(true); break;
+        case 'TITLE_PAGE': setTitlePageOpen(true); break;
+        case 'THESAURUS': setThesaurusOpen(true); break;
+        case 'REPORTS': setReportsOpen(true); break;
+        case 'CHARACTER_RENAME': setCharRenameOpen(true); break;
+        case 'BOOKMARKS': setBookmarksOpen(prev => !prev); break;
+        case 'PREFERENCES': setPreferencesOpen(true); break;
+        case 'REVISION_MODE': setRevisionPanelOpen(true); break;
         // New Features
-        case 'SCRIPT_COMPARE': setIsScriptCompareOpen(true); break;
-        case 'SCENE_LOCK_PANEL': setIsSceneLockPanelOpen(true); break;
-        case 'SPEAKING_MODE': setIsSpeakingModeOpen(true); break;
+        case 'SCRIPT_COMPARE': setScriptCompareOpen(true); break;
+        case 'SCENE_LOCK_PANEL': setSceneLockPanelOpen(true); break;
+        case 'SPEAKING_MODE': setSpeakingModeOpen(true); break;
         case 'CHARACTER_HIGHLIGHT': editor.dispatchCommand(OPEN_CHARACTER_SELECTOR_COMMAND, undefined); break;
         case 'BREAKDOWN_REPORT': editor.dispatchCommand(OPEN_BREAKDOWN_REPORT_COMMAND, undefined); break;
         case 'LOCK_SCENE': editor.dispatchCommand(TOGGLE_SCENE_LOCK_COMMAND, undefined); break;
-        case 'VERSION_HISTORY': setIsVersionHistoryOpen(true); break;
+        case 'VERSION_HISTORY': setVersionHistoryOpen(true); break;
         case 'INSERT_ACT_BREAK': editor.dispatchCommand(INSERT_ACT_BREAK_COMMAND, 1); break;
         case 'OMIT_SCENE': 
           editor.update(() => {
@@ -404,21 +407,21 @@ function EditorContent(props: any) {
     };
     window.addEventListener('editor-command', handleCommand as EventListener);
     return () => window.removeEventListener('editor-command', handleCommand as EventListener);
-  }, [editor, applyFormat, isSpellCheckEnabled]);
+  }, [editor, applyFormat, isSpellCheckEnabled, setBookmarksOpen, setCharRenameOpen, setExportOpen, setFindReplaceOpen, setReportsOpen, setThesaurusOpen, setTitlePageOpen]);
 
-  const formats = [
+  const formats = useMemo(() => [
     { id: 'Scene', icon: '🎬', key: 'Ctrl+1', creator: $createSceneHeadingNode },
     { id: 'Action', icon: '📝', key: 'Ctrl+2', creator: $createActionNode },
     { id: 'Character', icon: '👤', key: 'Ctrl+3', creator: $createCharacterNode },
     { id: 'Dialogue', icon: '💬', key: 'Ctrl+4', creator: $createDialogueNode },
     { id: 'Paren', icon: '🎭', key: 'Ctrl+5', creator: $createParentheticalNode },
     { id: 'Trans', icon: '➡️', key: 'Ctrl+6', creator: $createTransitionNode },
-  ];
+  ], []);
 
   return (
     <div className="flex flex-col h-full bg-[#0a0a0a]">
       {/* TOOLBAR */}
-      <div className="flex items-center h-10 sm:h-12 px-2 sm:px-4 bg-gradient-to-r from-[#121212] to-[#141414] border-b border-white/6 shrink-0 overflow-hidden">
+      <div className="flex items-center h-10 sm:h-12 px-2 sm:px-4 bg-linear-to-r from-[#121212] to-[#141414] border-b border-white/6 shrink-0 overflow-hidden">
         <div className="flex-1 flex items-center gap-0.5 sm:gap-1 overflow-x-auto scrollbar-hide pr-2" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
           {formats.map((f) => (
             <FormatButton
@@ -428,21 +431,21 @@ function EditorContent(props: any) {
             />
           ))}
           <div className="w-px h-6 bg-white/10 mx-3" />
-          <div className="flex items-center gap-0.5 bg-white/[0.03] rounded-lg p-0.5">
-            <button onClick={() => editor.dispatchCommand(UNDO_COMMAND, undefined)} title="Undo" className="w-8 h-8 flex items-center justify-center rounded-md text-white/40 hover:text-white hover:bg-white/[0.08] transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg></button>
-            <button onClick={() => editor.dispatchCommand(REDO_COMMAND, undefined)} title="Redo" className="w-8 h-8 flex items-center justify-center rounded-md text-white/40 hover:text-white hover:bg-white/[0.08] transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 3.7"/></svg></button>
+          <div className="flex items-center gap-0.5 bg-white/3 rounded-lg p-0.5">
+            <button onClick={() => editor.dispatchCommand(UNDO_COMMAND, undefined)} title="Undo" className="w-8 h-8 flex items-center justify-center rounded-md text-white/40 hover:text-white hover:bg-white/8 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg></button>
+            <button onClick={() => editor.dispatchCommand(REDO_COMMAND, undefined)} title="Redo" className="w-8 h-8 flex items-center justify-center rounded-md text-white/40 hover:text-white hover:bg-white/8 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 3.7"/></svg></button>
             <div className="w-px h-4 bg-white/10 mx-1" />
             <button onClick={() => window.dispatchEvent(new CustomEvent('editor-command', { detail: { type: 'SAVE' } }))} title="Save" className="w-8 h-8 flex items-center justify-center rounded-md text-white/40 hover:text-sky-400 hover:bg-sky-400/10 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg></button>
           </div>
         </div>
         <div className="flex items-center gap-1 sm:gap-3 shrink-0 ml-2 sm:ml-4">
-          <button onClick={() => setIsExportOpen(true)} className="flex items-center gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-white/5 hover:bg-white/8 text-white/60 hover:text-white text-xs transition-all border border-white/6"><span className="hidden sm:inline">Export</span></button>
+          <button onClick={() => setExportOpen(true)} className="flex items-center gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-white/5 hover:bg-white/8 text-white/60 hover:text-white text-xs transition-all border border-white/6"><span className="hidden sm:inline">Export</span></button>
         </div>
       </div>
 
       {/* EDITOR AREA */}
       <div className="flex flex-1 min-h-0">
-        <NavigatorPanel isOpen={isNavigatorOpen} onClose={() => setIsNavigatorOpen(false)} />
+        <NavigatorPanel isOpen={isNavigatorOpen} onClose={() => setNavigatorOpen(false)} />
         <div className="flex-1 overflow-y-auto flex flex-col">
           <div className="flex-1 p-2 sm:p-3 md:p-4 flex justify-center">
             <div className="w-full max-w-[850px] lg:w-[816px] lg:max-w-none flex flex-col relative bg-[#161616] rounded-lg sm:rounded-xl shadow-2xl border border-white/10 lg:min-h-[1056px] shrink-0 my-4 lg:my-8">
@@ -451,7 +454,7 @@ function EditorContent(props: any) {
                 contentEditable={
                   <div className="flex-1 min-h-0">
                     <ContentEditable 
-                      className="h-full py-8 px-4 outline-none text-[12pt] leading-[1] text-white/90 selection:bg-violet-500/30 lg:py-24 lg:pl-36 lg:pr-24 w-full box-border"
+                      className="h-full py-8 px-4 outline-none text-[12pt] leading-none text-white/90 selection:bg-violet-500/30 lg:py-24 lg:pl-36 lg:pr-24 w-full box-border"
                       style={{ fontFamily: "'Courier Prime', 'Courier New', Courier, monospace" }}
                     />
                   </div>
@@ -462,7 +465,7 @@ function EditorContent(props: any) {
             </div>
           </div>
         </div>
-        <SceneAnalysisPanel isOpen={isAnalysisOpen} onClose={() => setIsAnalysisOpen(false)} />
+        <SceneAnalysisPanel isOpen={isAnalysisOpen} onClose={() => setAnalysisOpen(false)} />
       </div>
 
       {/* STATUS BAR */}
@@ -485,32 +488,32 @@ function EditorContent(props: any) {
       <RevisionPlugin config={revisionHook.config} onConfigChange={revisionHook.setConfig} />
       <FocusModePlugin enabled={isFocusModeActive} />
       <SceneLockPlugin onLockedScenesChange={sceneLock.setLockedScenes} />
-      <SpeakingModePlugin isOpen={isSpeakingModeOpen} onClose={() => setIsSpeakingModeOpen(false)} />
+      <SpeakingModePlugin isOpen={isSpeakingModeOpen} onClose={() => setSpeakingModeOpen(false)} />
       <CharacterHighlightPlugin />
       <BreakdownPlugin />
       <SmartTypePlugin config={smartTypeConfig.config} />
-      <BookmarksPlugin bookmarks={bookmarks} onBookmarksChange={setBookmarks} onNavigateToBookmark={(bookmark) => console.log('Navigate to:', bookmark)} />
+      <BookmarksPlugin bookmarks={bookmarks} onBookmarksChange={setBookmarks} onNavigateToBookmark={(_bookmark) => { /* Navigation handled by panel */ }} />
       <SceneNumbersPlugin config={sceneNumbersConfig} />
       <MoresContinuedsPlugin config={moresContinuedsConfig} pageHeight={54} />
-      <ScriptContextPlugin onContextChange={props.onScriptContextChange} />
+      <ScriptContextPlugin onContextChange={onScriptContextChange} />
       <AlternativeDialoguePlugin />
 
       {/* MODALS */}
-      <BeatBoard isOpen={isBeatBoardOpen} onClose={() => setIsBeatBoardOpen(false)} />
-      <IndexCardsView isOpen={isIndexCardsOpen} onClose={() => setIsIndexCardsOpen(false)} />
-      <ExportImportPanel isOpen={isExportOpen} onClose={() => setIsExportOpen(false)} titlePageData={titlePageData} />
+      <BeatBoard isOpen={isBeatBoardOpen} onClose={() => setBeatBoardOpen(false)} />
+      <IndexCardsView isOpen={isIndexCardsOpen} onClose={() => setIndexCardsOpen(false)} />
+      <ExportImportPanel isOpen={isExportOpen} onClose={() => setExportOpen(false)} titlePageData={titlePageData} />
       <NotesPopover elementKey={notePopoverElementKey} onClose={() => setNotePopoverElementKey(null)} />
-      <FindReplaceDialog isOpen={isFindReplaceOpen} onClose={() => setIsFindReplaceOpen(false)} />
-      <GoToDialog isOpen={isGoToOpen} onClose={() => setIsGoToOpen(false)} totalPages={pageCount} totalScenes={sceneCount} onGoToPage={() => {}} onGoToScene={() => {}} />
-      <TitlePageEditor isOpen={isTitlePageOpen} onClose={() => setIsTitlePageOpen(false)} data={titlePageData} onSave={setTitlePageData} />
-      <CharacterRenameDialog isOpen={isCharRenameOpen} onClose={() => setIsCharRenameOpen(false)} />
-      <ScriptReports isOpen={isReportsOpen} onClose={() => setIsReportsOpen(false)} />
-      <ThesaurusDialog isOpen={isThesaurusOpen} onClose={() => setIsThesaurusOpen(false)} />
-      <BookmarksPanel isOpen={isBookmarksOpen} onClose={() => setIsBookmarksOpen(false)} bookmarks={bookmarks} onBookmarksChange={setBookmarks} onNavigateToBookmark={() => {}} />
-      <PreferencesDialog isOpen={isPreferencesOpen} onClose={() => setIsPreferencesOpen(false)} preferences={preferences} onSave={setPreferences} />
-      <RevisionPanel isOpen={isRevisionPanelOpen} onClose={() => setIsRevisionPanelOpen(false)} config={revisionHook.config} onConfigChange={revisionHook.setConfig} />
-      <ScriptCompareDialog isOpen={isScriptCompareOpen} onClose={() => setIsScriptCompareOpen(false)} />
-      <SceneLockPanel isOpen={isSceneLockPanelOpen} onClose={() => setIsSceneLockPanelOpen(false)} lockedScenes={Array.from(sceneLock.lockedScenes)} onUnlockScene={(key) => editor.dispatchCommand(UNLOCK_SCENE_COMMAND, key)} onUnlockAll={() => editor.dispatchCommand(UNLOCK_ALL_SCENES_COMMAND, undefined)} />
+      <FindReplaceDialog isOpen={isFindReplaceOpen} onClose={() => setFindReplaceOpen(false)} />
+      <GoToDialog isOpen={isGoToOpen} onClose={() => setGoToOpen(false)} totalPages={pageCount} totalScenes={sceneCount} onGoToPage={() => {}} onGoToScene={() => {}} />
+      <TitlePageEditor isOpen={isTitlePageOpen} onClose={() => setTitlePageOpen(false)} data={titlePageData} onSave={setTitlePageData} />
+      <CharacterRenameDialog isOpen={isCharRenameOpen} onClose={() => setCharRenameOpen(false)} />
+      <ScriptReports isOpen={isReportsOpen} onClose={() => setReportsOpen(false)} />
+      <ThesaurusDialog isOpen={isThesaurusOpen} onClose={() => setThesaurusOpen(false)} />
+      <BookmarksPanel isOpen={isBookmarksOpen} onClose={() => setBookmarksOpen(false)} bookmarks={bookmarks} onBookmarksChange={setBookmarks} onNavigateToBookmark={() => {}} />
+      <PreferencesDialog isOpen={isPreferencesOpen} onClose={() => setPreferencesOpen(false)} preferences={preferences} onSave={setPreferences} />
+      <RevisionPanel isOpen={isRevisionPanelOpen} onClose={() => setRevisionPanelOpen(false)} config={revisionHook.config} onConfigChange={revisionHook.setConfig} />
+      <ScriptCompareDialog isOpen={isScriptCompareOpen} onClose={() => setScriptCompareOpen(false)} />
+      <SceneLockPanel isOpen={isSceneLockPanelOpen} onClose={() => setSceneLockPanelOpen(false)} lockedScenes={Array.from(sceneLock.lockedScenes)} onUnlockScene={(key) => editor.dispatchCommand(UNLOCK_SCENE_COMMAND, key)} onUnlockAll={() => editor.dispatchCommand(UNLOCK_ALL_SCENES_COMMAND, undefined)} />
       {isVersionHistoryOpen && (
         <VersionHistoryPanel 
           projectId="default"
@@ -526,12 +529,12 @@ function EditorContent(props: any) {
               toast.error('Failed to restore version');
             }
           }}
-          onClose={() => setIsVersionHistoryOpen(false)}
+          onClose={() => setVersionHistoryOpen(false)}
         />
       )}
       <AlternativeDialogueDialog 
         isOpen={isAltDialogueOpen} 
-        onClose={() => setIsAltDialogueOpen(false)} 
+        onClose={() => setAltDialogueOpen(false)} 
         nodeKey={altDialogueData.nodeKey}
         currentText={altDialogueData.currentText}
       />
@@ -539,48 +542,41 @@ function EditorContent(props: any) {
   );
 }
 
-export default function ScriptEditor(props: any) {
-  const { 
-    isNavigatorOpen, setIsNavigatorOpen, isBeatBoardOpen, setIsBeatBoardOpen,
-    isIndexCardsOpen, setIsIndexCardsOpen, isAnalysisOpen, setIsAnalysisOpen,
-    isExportOpen, setIsExportOpen,
-    isTypewriterEnabled, isFocusModeActive,
-    sceneNumbersConfig, moresContinuedsConfig,
-    onToggleSidebar
-  } = props;
-  const [activeFormat, setActiveFormat] = useState("Action");
-  const [wordCount, setWordCount] = useState(0);
-  const [pageCount, setPageCount] = useState(1);
+import { useEditorStore } from "../../stores/editorStore";
 
-  const initialConfig = {
+// Props - drastically simplified
+interface ScriptEditorProps {
+  sceneNumbersConfig: any;
+  moresContinuedsConfig: any;
+  onScriptContextChange: (context: any) => void; // Assuming ScriptContext is 'any' for now based on usage
+}
+
+export default function ScriptEditor({
+  sceneNumbersConfig,
+  moresContinuedsConfig,
+  onScriptContextChange
+}: ScriptEditorProps) {
+
+  const initialConfig = useMemo(() => ({
     namespace: "ScriptEditor",
     theme,
     onError,
     nodes: [
       SceneHeadingNode, ActionNode, CharacterNode, DialogueNode,
       ParentheticalNode, TokenNode, TransitionNode, ShotNode, DualDialogueNode,
-      PageBreakNode, ActBreakNode,
+      PageBreakNode, ActBreakNode
     ],
-  };
+  }), []);
 
   return (
     <LexicalComposer initialConfig={initialConfig}>
-      <EditorContent
-        activeFormat={activeFormat} setActiveFormat={setActiveFormat}
-        wordCount={wordCount} setWordCount={setWordCount}
-        pageCount={pageCount} setPageCount={setPageCount}
-        isNavigatorOpen={isNavigatorOpen} setIsNavigatorOpen={setIsNavigatorOpen}
-        isBeatBoardOpen={isBeatBoardOpen} setIsBeatBoardOpen={setIsBeatBoardOpen}
-        isIndexCardsOpen={isIndexCardsOpen} setIsIndexCardsOpen={setIsIndexCardsOpen}
-        isAnalysisOpen={isAnalysisOpen} setIsAnalysisOpen={setIsAnalysisOpen}
-        isExportOpen={isExportOpen} setIsExportOpen={setIsExportOpen}
-        isTypewriterEnabled={isTypewriterEnabled}
-        isFocusModeActive={isFocusModeActive}
-
-        sceneNumbersConfig={sceneNumbersConfig}
-        moresContinuedsConfig={moresContinuedsConfig}
-        onToggleSidebar={onToggleSidebar}
-      />
+      <div className="absolute inset-0 flex flex-col overflow-hidden">
+        <EditorContent 
+            sceneNumbersConfig={sceneNumbersConfig}
+            moresContinuedsConfig={moresContinuedsConfig}
+            onScriptContextChange={onScriptContextChange}
+        />
+      </div>
     </LexicalComposer>
   );
 }

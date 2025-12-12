@@ -2,8 +2,20 @@
 //!
 //! ComfyUI is the CENTRAL orchestration layer for CinemaOS:
 //! - All generation (image, video, audio, 3D) goes through ComfyUI workflows
-//! - Custom nodes wrap cloud providers (Fal, Vertex) and local models
+//! - Custom nodes wrap cloud providers (Fal.ai, Vertex AI) and local models
 //! - Workflows are portable between local and cloud execution
+//!
+//! ## Model Support (December 2025)
+//!
+//! ### Cloud (via Fal.ai Serverless)
+//! - **Image**: FLUX.2, Nano Banana Pro, Imagen 4
+//! - **Video**: Veo 3.1, Sora 2, Kling v2.6 (all with native audio)
+//! - **Audio**: Lyria 2, Beatoven, ElevenLabs
+//! - **3D**: Meshy
+//!
+//! ### Local (ComfyUI Native)
+//! - **Image**: FLUX.2 Schnell/Dev
+//! - **Video**: LTX Video 13B, Wan 2.2
 //!
 //! For low-latency tasks (chat, quick LLM responses), use the Fast Path
 //! which bypasses ComfyUI and calls providers directly.
@@ -28,17 +40,180 @@ pub enum ExecutionPath {
 pub enum WorkflowTarget {
     /// Run on user's local ComfyUI instance
     Local,
-    /// Run on CinemaOS cloud (Fal.ai serverless ComfyUI)
+    /// Run on CinemaOS cloud (Fal.ai serverless)
     Cloud,
+    /// Hybrid: heavy compute on cloud, post-processing local
+    Hybrid,
 }
 
-/// Custom node types for CinemaOS workflows (simplified for Specta compatibility)
+/// Custom node types for CinemaOS workflows
+/// Updated December 2025 with latest Fal.ai models
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
+#[serde(tag = "type", rename_all = "snake_case")]
 pub enum CinemaOSNode {
-    // ── Provider Nodes ──
+    // ══════════════════════════════════════════════════════════════════════════
+    // IMAGE GENERATION (Fal.ai Cloud)
+    // ══════════════════════════════════════════════════════════════════════════
+    /// FLUX.2 - Black Forest Labs (default image model)
+    FalFlux2 {
+        prompt: String,
+        width: u32,
+        height: u32,
+        num_inference_steps: u32,
+        guidance_scale: f32,
+    },
+
+    /// Nano Banana Pro - Google's image gen/edit
+    FalNanoBananaPro {
+        prompt: String,
+        image_url: Option<String>,
+        edit_mode: bool,
+    },
+
+    /// FLUX Kontext - Multi-image editing
+    FalFluxKontext {
+        prompt: String,
+        reference_images: Vec<String>,
+    },
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // VIDEO GENERATION (Fal.ai Cloud) - All support native audio
+    // ══════════════════════════════════════════════════════════════════════════
+    /// Veo 3.1 - Google DeepMind (state-of-the-art, native audio)
+    FalVeo31 {
+        prompt: String,
+        duration_seconds: f32,
+        with_audio: bool,
+        image_url: Option<String>,
+    },
+
+    /// Sora 2 Pro - OpenAI (premium quality, native audio)
+    FalSora2Pro {
+        prompt: String,
+        with_audio: bool,
+        image_url: Option<String>,
+    },
+
+    /// Kling v2.6 - Kuaishou (cinematic, native audio)
+    FalKlingV26 {
+        prompt: String,
+        duration_seconds: f32,
+        with_audio: bool,
+        image_url: Option<String>,
+    },
+
+    /// Kling v2.5 Turbo - Fast cinematic
+    FalKlingV25Turbo {
+        prompt: String,
+        image_url: Option<String>,
+    },
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // AUDIO GENERATION (Fal.ai + External)
+    // ══════════════════════════════════════════════════════════════════════════
+    /// Beatoven - Royalty-free music generation
+    FalBeatovenMusic {
+        prompt: String,
+        genre: String,
+        duration_seconds: f32,
+    },
+
+    /// Beatoven SFX - Sound effects
+    FalBeatovenSfx { description: String },
+
+    /// ElevenLabs TTS - Voice synthesis
+    ElevenLabsTts {
+        text: String,
+        voice_id: String,
+        model: String, // v3, flash_v2.5, turbo_v2.5
+    },
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // AVATAR & LIPSYNC (Fal.ai Cloud)
+    // ══════════════════════════════════════════════════════════════════════════
+    /// Creatify Aurora - Studio quality avatars
+    FalCreatifyAurora {
+        image_url: String,
+        audio_url: String,
+    },
+
+    /// OmniHuman v1.5 - Expressive avatars
+    FalOmniHuman {
+        image_url: String,
+        audio_url: String,
+    },
+
+    /// Sync Lipsync v2
+    FalSyncLipsync {
+        video_url: String,
+        audio_url: String,
+    },
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // LOCAL MODELS (ComfyUI Native)
+    // ══════════════════════════════════════════════════════════════════════════
+    /// Local FLUX.2 Schnell (4-step fast)
+    LocalFlux2Schnell {
+        prompt: String,
+        width: u32,
+        height: u32,
+    },
+
+    /// Local LTX Video 13B
+    LocalLtxVideo {
+        prompt: String,
+        image_url: Option<String>,
+    },
+
+    /// Local Wan 2.2
+    LocalWan22 {
+        prompt: String,
+        image_url: Option<String>,
+    },
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // UTILITY NODES
+    // ══════════════════════════════════════════════════════════════════════════
+    /// Topaz Upscaler (image/video)
+    FalTopazUpscale {
+        media_url: String,
+        scale: f32,
+        is_video: bool,
+    },
+
+    /// Bria Background Removal
+    FalBriaRemoveBg { image_url: String },
+
+    /// Color Grading
+    ColorGrade {
+        lut_id: Option<String>,
+        params_json: String,
+    },
+
+    /// SAM 3 Segmentation
+    Segment {
+        mode: String, // "auto", "point", "box"
+        image_url: String,
+    },
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // VAULT INTEGRATION
+    // ══════════════════════════════════════════════════════════════════════════
+    /// Load context from Vault tokens
+    VaultContext { token_ids: Vec<String> },
+
+    /// Save output to Vault
+    VaultSave {
+        asset_type: String,
+        token_id: Option<String>,
+    },
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // GENERIC PROVIDER NODES (legacy compatibility)
+    // ══════════════════════════════════════════════════════════════════════════
     FalInference {
         model_id: String,
-        params_json: String, // JSON-encoded params
+        params_json: String,
     },
     VertexInference {
         model_id: String,
@@ -47,25 +222,6 @@ pub enum CinemaOSNode {
     LocalInference {
         model_id: String,
         params_json: String,
-    },
-
-    // ── Vault Integration ──
-    VaultContext {
-        token_ids: Vec<String>,
-    },
-    VaultSave {
-        asset_type: String,
-    },
-
-    // ── Media Processing ──
-    Upscale {
-        scale: f32,
-    },
-    ColorGrade {
-        lut_id: Option<String>,
-    },
-    Segment {
-        mode: String,
     },
 }
 
@@ -79,13 +235,15 @@ pub struct Workflow {
     pub connections: Vec<NodeConnection>,
     pub local_compatible: bool,
     pub requires_credits: bool,
+    /// Estimated cost per execution (USD)
+    pub estimated_cost: f32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 pub struct WorkflowNode {
     pub id: String,
     pub node_type: String,
-    pub params_json: String, // JSON-encoded params
+    pub params_json: String,
     pub position_x: f32,
     pub position_y: f32,
 }
@@ -107,7 +265,7 @@ pub fn determine_execution_path(
     // Fast Path: LLM chat and quick text generation
     let is_fast_path_task = matches!(
         task_type,
-        "chat" | "quick_text" | "translate" | "summarize" | "completion"
+        "chat" | "quick_text" | "translate" | "summarize" | "completion" | "script"
     );
 
     if is_fast_path_task {
@@ -120,20 +278,43 @@ pub fn determine_execution_path(
 
     // Workflow Path: All generation tasks
     let target = if prefer_local {
-        WorkflowTarget::Local
+        // Check if model supports local execution
+        let local_models = ["flux.2-schnell", "ltx-video", "wan-2.2", "flux-dev"];
+        if local_models
+            .iter()
+            .any(|m| model_id.to_lowercase().contains(m))
+        {
+            WorkflowTarget::Local
+        } else {
+            WorkflowTarget::Hybrid // Cloud gen, local post-processing
+        }
     } else {
         WorkflowTarget::Cloud
     };
 
     let workflow_id = match task_type {
-        "image" | "concept_art" => "text_to_image_v1",
-        "video" | "shot" => "text_to_video_v1",
-        "image_edit" | "inpaint" => "image_edit_v1",
-        "upscale" => "upscale_v1",
-        "voice" | "tts" => "text_to_speech_v1",
-        "music" | "sfx" => "music_generation_v1",
-        "3d" | "model" => "text_to_3d_v1",
-        "segment" | "mask" => "segmentation_v1",
+        // Image workflows
+        "image" | "concept_art" => "flux2_turbo_v1",
+        "image_edit" | "inpaint" => "image_edit_kontext_v1",
+        "upscale" => "topaz_upscale_v1",
+
+        // Video workflows
+        "video" | "shot" => "veo31_cinematic_v1",
+        "video_fast" => "kling_turbo_v1",
+        "image_to_video" | "i2v" => "i2v_kling_v1",
+
+        // Audio workflows
+        "voice" | "tts" => "elevenlabs_v3_v1",
+        "music" => "beatoven_music_v1",
+        "sfx" => "beatoven_sfx_v1",
+
+        // Avatar workflows
+        "avatar" | "lipsync" => "omnihuman_avatar_v1",
+
+        // Other
+        "3d" | "model" => "meshy_3d_v1",
+        "segment" | "mask" => "sam3_segment_v1",
+
         _ => "generic_v1",
     };
 
@@ -143,55 +324,177 @@ pub fn determine_execution_path(
     }
 }
 
-/// Get predefined workflow templates
+/// Get predefined workflow templates - Updated December 2025
 pub fn get_workflow_template(workflow_id: &str) -> Option<Workflow> {
     match workflow_id {
+        // ═══════════════════════════════════════════════════════════════════════
+        // IMAGE WORKFLOWS
+        // ═══════════════════════════════════════════════════════════════════════
+        "flux2_turbo_v1" => Some(Workflow {
+            id: "flux2_turbo_v1".into(),
+            name: "FLUX.2 Turbo Image".into(),
+            description: "4-step ultra-fast image generation".into(),
+            nodes: vec![WorkflowNode {
+                id: "flux2".into(),
+                node_type: "FalFlux2".into(),
+                params_json: r#"{"num_inference_steps": 4, "guidance_scale": 1.0}"#.into(),
+                position_x: 0.0,
+                position_y: 0.0,
+            }],
+            connections: vec![],
+            local_compatible: true,
+            requires_credits: false,
+            estimated_cost: 0.003,
+        }),
+
         "text_to_image_v1" => Some(Workflow {
             id: "text_to_image_v1".into(),
             name: "Text to Image".into(),
-            description: "Generate images from text prompts".into(),
-            nodes: vec![
-                WorkflowNode {
-                    id: "prompt".into(),
-                    node_type: "CLIPTextEncode".into(),
-                    params_json: "{}".into(),
-                    position_x: 0.0,
-                    position_y: 0.0,
-                },
-                WorkflowNode {
-                    id: "sampler".into(),
-                    node_type: "KSampler".into(),
-                    params_json: r#"{"steps": 20, "cfg": 7.0}"#.into(),
-                    position_x: 200.0,
-                    position_y: 0.0,
-                },
-                WorkflowNode {
-                    id: "decode".into(),
-                    node_type: "VAEDecode".into(),
-                    params_json: "{}".into(),
-                    position_x: 400.0,
-                    position_y: 0.0,
-                },
-            ],
-            connections: vec![
-                NodeConnection {
-                    from_node: "prompt".into(),
-                    from_output: "CONDITIONING".into(),
-                    to_node: "sampler".into(),
-                    to_input: "positive".into(),
-                },
-                NodeConnection {
-                    from_node: "sampler".into(),
-                    from_output: "LATENT".into(),
-                    to_node: "decode".into(),
-                    to_input: "samples".into(),
-                },
-            ],
+            description: "High quality image generation with FLUX.2".into(),
+            nodes: vec![WorkflowNode {
+                id: "flux2".into(),
+                node_type: "FalFlux2".into(),
+                params_json: r#"{"num_inference_steps": 28, "guidance_scale": 3.5}"#.into(),
+                position_x: 0.0,
+                position_y: 0.0,
+            }],
+            connections: vec![],
             local_compatible: true,
             requires_credits: false,
+            estimated_cost: 0.01,
         }),
+
+        // ═══════════════════════════════════════════════════════════════════════
+        // VIDEO WORKFLOWS
+        // ═══════════════════════════════════════════════════════════════════════
+        "veo31_cinematic_v1" => Some(Workflow {
+            id: "veo31_cinematic_v1".into(),
+            name: "Veo 3.1 Cinematic".into(),
+            description: "State-of-the-art video with native audio (Google DeepMind)".into(),
+            nodes: vec![WorkflowNode {
+                id: "veo31".into(),
+                node_type: "FalVeo31".into(),
+                params_json: r#"{"duration_seconds": 5.0, "with_audio": true}"#.into(),
+                position_x: 0.0,
+                position_y: 0.0,
+            }],
+            connections: vec![],
+            local_compatible: false,
+            requires_credits: true,
+            estimated_cost: 0.25, // ~$0.05/sec * 5 sec
+        }),
+
+        "kling_turbo_v1" => Some(Workflow {
+            id: "kling_turbo_v1".into(),
+            name: "Kling v2.5 Turbo".into(),
+            description: "Fast cinematic video generation".into(),
+            nodes: vec![WorkflowNode {
+                id: "kling".into(),
+                node_type: "FalKlingV25Turbo".into(),
+                params_json: r#"{}"#.into(),
+                position_x: 0.0,
+                position_y: 0.0,
+            }],
+            connections: vec![],
+            local_compatible: false,
+            requires_credits: true,
+            estimated_cost: 0.15,
+        }),
+
+        "i2v_kling_v1" => Some(Workflow {
+            id: "i2v_kling_v1".into(),
+            name: "Image to Video (Kling)".into(),
+            description: "Animate images with Kling v2.6 + native audio".into(),
+            nodes: vec![WorkflowNode {
+                id: "kling26".into(),
+                node_type: "FalKlingV26".into(),
+                params_json: r#"{"duration_seconds": 5.0, "with_audio": true}"#.into(),
+                position_x: 0.0,
+                position_y: 0.0,
+            }],
+            connections: vec![],
+            local_compatible: false,
+            requires_credits: true,
+            estimated_cost: 0.55, // ~$0.11/sec * 5 sec
+        }),
+
+        // ═══════════════════════════════════════════════════════════════════════
+        // AUDIO WORKFLOWS
+        // ═══════════════════════════════════════════════════════════════════════
+        "beatoven_music_v1" => Some(Workflow {
+            id: "beatoven_music_v1".into(),
+            name: "Beatoven Music".into(),
+            description: "Royalty-free instrumental music generation".into(),
+            nodes: vec![WorkflowNode {
+                id: "music".into(),
+                node_type: "FalBeatovenMusic".into(),
+                params_json: r#"{"genre": "cinematic", "duration_seconds": 30.0}"#.into(),
+                position_x: 0.0,
+                position_y: 0.0,
+            }],
+            connections: vec![],
+            local_compatible: false,
+            requires_credits: true,
+            estimated_cost: 0.10,
+        }),
+
+        "elevenlabs_v3_v1" => Some(Workflow {
+            id: "elevenlabs_v3_v1".into(),
+            name: "ElevenLabs v3 TTS".into(),
+            description: "High-quality voice synthesis with emotional range".into(),
+            nodes: vec![WorkflowNode {
+                id: "tts".into(),
+                node_type: "ElevenLabsTts".into(),
+                params_json: r#"{"model": "v3"}"#.into(),
+                position_x: 0.0,
+                position_y: 0.0,
+            }],
+            connections: vec![],
+            local_compatible: false,
+            requires_credits: true,
+            estimated_cost: 0.05,
+        }),
+
+        // ═══════════════════════════════════════════════════════════════════════
+        // AVATAR WORKFLOWS
+        // ═══════════════════════════════════════════════════════════════════════
+        "omnihuman_avatar_v1" => Some(Workflow {
+            id: "omnihuman_avatar_v1".into(),
+            name: "OmniHuman Avatar".into(),
+            description: "Expressive talking avatar from image + audio".into(),
+            nodes: vec![WorkflowNode {
+                id: "avatar".into(),
+                node_type: "FalOmniHuman".into(),
+                params_json: r#"{}"#.into(),
+                position_x: 0.0,
+                position_y: 0.0,
+            }],
+            connections: vec![],
+            local_compatible: false,
+            requires_credits: true,
+            estimated_cost: 0.20,
+        }),
+
         _ => None,
     }
+}
+
+/// Get all available workflow templates
+pub fn get_all_workflow_templates() -> Vec<Workflow> {
+    let ids = [
+        "flux2_turbo_v1",
+        "text_to_image_v1",
+        "veo31_cinematic_v1",
+        "kling_turbo_v1",
+        "i2v_kling_v1",
+        "beatoven_music_v1",
+        "elevenlabs_v3_v1",
+        "omnihuman_avatar_v1",
+    ];
+
+    ids.iter()
+        .filter_map(|id| get_workflow_template(id))
+        .collect()
 }
 
 #[cfg(test)]
@@ -208,8 +511,18 @@ mod tests {
         let path = determine_execution_path("image", "flux.2", false);
         assert!(matches!(path, ExecutionPath::WorkflowPath { .. }));
 
-        // Video generation with prefer_local should use Local target
+        // Video generation with prefer_local should use Hybrid (cloud model)
         let path = determine_execution_path("video", "veo-3.1", true);
+        assert!(matches!(
+            path,
+            ExecutionPath::WorkflowPath {
+                execution_target: WorkflowTarget::Hybrid,
+                ..
+            }
+        ));
+
+        // Local model should use Local target
+        let path = determine_execution_path("image", "flux.2-schnell", true);
         assert!(matches!(
             path,
             ExecutionPath::WorkflowPath {
@@ -220,11 +533,23 @@ mod tests {
     }
 
     #[test]
-    fn test_workflow_template() {
-        let workflow = get_workflow_template("text_to_image_v1");
+    fn test_workflow_templates() {
+        let workflow = get_workflow_template("veo31_cinematic_v1");
         assert!(workflow.is_some());
         let w = workflow.unwrap();
-        assert_eq!(w.nodes.len(), 3);
-        assert_eq!(w.connections.len(), 2);
+        assert!(w.requires_credits);
+        assert!(!w.local_compatible);
+
+        let all = get_all_workflow_templates();
+        assert!(all.len() >= 5);
+    }
+
+    #[test]
+    fn test_video_workflows_have_audio() {
+        let veo = get_workflow_template("veo31_cinematic_v1").unwrap();
+        assert!(veo.nodes[0].params_json.contains("with_audio"));
+
+        let kling = get_workflow_template("i2v_kling_v1").unwrap();
+        assert!(kling.nodes[0].params_json.contains("with_audio"));
     }
 }

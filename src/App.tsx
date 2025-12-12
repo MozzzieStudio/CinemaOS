@@ -12,7 +12,9 @@ import { useMoresContinueds } from "./components/editor/plugins/MoresContinuedsP
 import { createMenus } from "./config/menus";
 import { Toaster } from "./components/ui/sonner";
 import { CommandPalette } from "./components/CommandPalette";
+import PreferencesDialog, { usePreferences } from "./components/PreferencesDialog";
 import type { AgentContext, ScriptContext } from "./types/agents";
+import { useEditorStore } from "./stores/editorStore";
 
 type ViewMode = "writer" | "preproduction" | "studio";
 
@@ -24,25 +26,20 @@ const VIEW_MODES = [
 
 function App() {
   const [viewMode, setViewMode] = useState<ViewMode>("writer");
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
-  
-  // Lifted State for Panels
-  const [isNavigatorOpen, setIsNavigatorOpen] = useState(false);
-  const [isBeatBoardOpen, setIsBeatBoardOpen] = useState(false);
-  const [isIndexCardsOpen, setIsIndexCardsOpen] = useState(false);
-  const [isAnalysisOpen, setIsAnalysisOpen] = useState(false);
-  const [isExportOpen, setIsExportOpen] = useState(false);
-  
-  // New FD13 Features
-  const [isFocusModeActive, setIsFocusModeActive] = useState(false);
-  const [isTypewriterEnabled, setIsTypewriterEnabled] = useState(false);
-  const [isRevisionPanelOpen, setIsRevisionPanelOpen] = useState(false);
-  const [isWritingStatsOpen, setIsWritingStatsOpen] = useState(false);
 
-  const [isKeyboardShortcutsOpen, setIsKeyboardShortcutsOpen] = useState(false);
-  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  // Zustand Store
+  const {
+    isSidebarOpen, setSidebarOpen,
+    isRevisionPanelOpen, setRevisionPanelOpen,
+    isWritingStatsOpen, setWritingStatsOpen,
+    isKeyboardShortcutsOpen, setKeyboardShortcutsOpen,
+    isCommandPaletteOpen, setCommandPaletteOpen,
+    isPreferencesOpen, setPreferencesOpen
+  } = useEditorStore();
+
+  const { preferences, setPreferences } = usePreferences();
   
   // Editor State
   const sceneNumbersConfig = useSceneNumbers();
@@ -86,30 +83,14 @@ function App() {
   };
 
   // Menu definitions
-  // Menu definitions
   const menus = useMemo(() => createMenus(
     dispatchCommand,
-    {
-      isNavigatorOpen, setIsNavigatorOpen,
-      isBeatBoardOpen, setIsBeatBoardOpen,
-      isIndexCardsOpen, setIsIndexCardsOpen,
-      isFocusModeActive, setIsFocusModeActive,
-      isTypewriterEnabled, setIsTypewriterEnabled,
-      isRevisionPanelOpen, setIsRevisionPanelOpen,
-      isWritingStatsOpen, setIsWritingStatsOpen,
-      isAnalysisOpen, setIsAnalysisOpen,
-      isSidebarOpen, setIsSidebarOpen,
-      isKeyboardShortcutsOpen, setIsKeyboardShortcutsOpen
-    },
     {
        sceneNumbers: { enabled: sceneNumbersConfig.config.enabled, toggle: sceneNumbersConfig.toggleEnabled },
        moresContinueds: { enabled: moresContinuedsConfig.config.enabled, toggle: moresContinuedsConfig.toggleEnabled }
     }
   ), [
-    isNavigatorOpen, isBeatBoardOpen, isIndexCardsOpen, 
-    isFocusModeActive, isTypewriterEnabled, 
-    isRevisionPanelOpen, isWritingStatsOpen, 
-    isAnalysisOpen, isSidebarOpen, isKeyboardShortcutsOpen,
+    dispatchCommand,
     sceneNumbersConfig.config.enabled, moresContinuedsConfig.config.enabled
   ]);
 
@@ -147,20 +128,10 @@ function App() {
       case "writer":
         return (
           <ScriptEditor 
-            // Pass down state
-            isNavigatorOpen={isNavigatorOpen} setIsNavigatorOpen={setIsNavigatorOpen}
-            isBeatBoardOpen={isBeatBoardOpen} setIsBeatBoardOpen={setIsBeatBoardOpen}
-            isIndexCardsOpen={isIndexCardsOpen} setIsIndexCardsOpen={setIsIndexCardsOpen}
-            isAnalysisOpen={isAnalysisOpen} setIsAnalysisOpen={setIsAnalysisOpen}
-            isExportOpen={isExportOpen} setIsExportOpen={setIsExportOpen}
-            // FD13 Features
-            isTypewriterEnabled={isTypewriterEnabled}
-            isFocusModeActive={isFocusModeActive}
-            setIsFocusModeActive={setIsFocusModeActive}
+            // Props removed - using Zustand internally
             sceneNumbersConfig={sceneNumbersConfig.config}
             moresContinuedsConfig={moresContinuedsConfig.config}
-            // AI Sidebar
-            onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+            // AI Sidebar - using store
             // Agent Context
             onScriptContextChange={handleScriptContextChange}
           />
@@ -284,7 +255,7 @@ function App() {
           {/* Right: AI Crew Button */}
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              onClick={() => setSidebarOpen(!isSidebarOpen)}
               title="AI Crew"
               className={`group relative flex items-center gap-2 px-3 py-1.5 rounded-lg text-[13px] font-medium transition-all duration-200 ${
                 isSidebarOpen
@@ -309,8 +280,8 @@ function App() {
           {/* Right Side Panels - Overlay for Writer Mode */}
           {viewMode === "writer" && (
             <>
-              <RevisionPanel isOpen={isRevisionPanelOpen} onClose={() => setIsRevisionPanelOpen(false)} />
-              <WritingStatsPanel isOpen={isWritingStatsOpen} onClose={() => setIsWritingStatsOpen(false)} />
+              <RevisionPanel isOpen={isRevisionPanelOpen} onClose={() => setRevisionPanelOpen(false)} />
+              <WritingStatsPanel isOpen={isWritingStatsOpen} onClose={() => setWritingStatsOpen(false)} />
             </>
           )}
 
@@ -329,17 +300,24 @@ function App() {
       {/* Keyboard Shortcuts Dialog */}
       <KeyboardShortcutsDialog 
         isOpen={isKeyboardShortcutsOpen} 
-        onClose={() => setIsKeyboardShortcutsOpen(false)} 
+        onClose={() => setKeyboardShortcutsOpen(false)} 
       />
       
       <CommandPalette 
         isOpen={isCommandPaletteOpen} 
-        setIsOpen={setIsCommandPaletteOpen}
+        setIsOpen={setCommandPaletteOpen}
         dispatchCommand={dispatchCommand}
         viewMode={viewMode}
         setViewMode={setViewMode}
       />
       
+      <PreferencesDialog 
+        isOpen={isPreferencesOpen}
+        onClose={() => setPreferencesOpen(false)}
+        preferences={preferences}
+        onSave={setPreferences}
+      />
+
       <Toaster />
     </div>
   );

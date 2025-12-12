@@ -5,6 +5,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import { invoke } from "@tauri-apps/api/core";
 
 export interface UserPreferences {
   // Font Settings
@@ -109,7 +110,7 @@ export default function PreferencesDialog({
   onSave 
 }: PreferencesDialogProps) {
   const [localPrefs, setLocalPrefs] = useState(preferences);
-  const [activeTab, setActiveTab] = useState<'general' | 'display' | 'export'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'display' | 'export' | 'cloud'>('general');
 
   // Sync local state with props
   useEffect(() => {
@@ -123,10 +124,54 @@ export default function PreferencesDialog({
     onClose();
   };
 
+  const [keyStatuses, setKeyStatuses] = useState({
+    hf_token: false,
+    fal_key: false,
+    openai_key: false
+  });
+  const [inputKeys, setInputKeys] = useState({
+    hf_token: '',
+    fal_key: '',
+    openai_key: ''
+  });
+
+  useEffect(() => {
+    if (isOpen) {
+       checkKeyStatus();
+    }
+  }, [isOpen]);
+
+  const checkKeyStatus = async () => {
+    const hf = await invoke('get_api_key_status', { service: 'hf_token' }) as boolean;
+    const fal = await invoke('get_api_key_status', { service: 'fal_key' }) as boolean;
+    const oa = await invoke('get_api_key_status', { service: 'openai_key' }) as boolean;
+    setKeyStatuses({ hf_token: hf, fal_key: fal, openai_key: oa });
+  };
+
+  const saveKey = async (service: string, key: string) => {
+    if (!key) return;
+    try {
+      await invoke('save_api_key', { service, key });
+      await checkKeyStatus();
+      setInputKeys(p => ({ ...p, [service]: '' })); // Clear input on success
+      // toast.success("Key Saved"); // Need toast prop or import
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const deleteKey = async (service: string) => {
+      try {
+          await invoke('delete_api_key', { service });
+          await checkKeyStatus();
+      } catch (e) { console.error(e); }
+  };
+
   const tabs = [
     { id: 'general', label: 'General', icon: '⚙️' },
     { id: 'display', label: 'Display', icon: '🖥️' },
     { id: 'export', label: 'Export', icon: '📤' },
+    { id: 'cloud', label: 'AI & Cloud', icon: '☁️' },
   ] as const;
 
   return (
@@ -325,6 +370,58 @@ export default function PreferencesDialog({
                     localPrefs.pdfIncludeTitlePage ? 'translate-x-6' : 'translate-x-0.5'
                   }`} />
                 </button>
+              </div>
+            </div>
+          )}
+          {activeTab === 'cloud' && (
+            <div className="space-y-6">
+              <div className="p-4 bg-violet-500/10 border border-violet-500/20 rounded-lg">
+                <h3 className="text-violet-200 font-medium mb-1">Secure Storage</h3>
+                <p className="text-sm text-violet-200/60">API keys are stored securely in your OS Keychain/Keyring and are never synced to our servers.</p>
+              </div>
+
+              {/* HuggingFace */}
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                    <label className="text-sm font-medium text-white/80">HuggingFace Token</label>
+                    <span className={`text-xs px-2 py-0.5 rounded ${keyStatuses.hf_token ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
+                        {keyStatuses.hf_token ? 'INSTALLED' : 'MISSING'}
+                    </span>
+                </div>
+                <div className="flex gap-2">
+                    <input 
+                        type="password" 
+                        placeholder="hf_..." 
+                        className="flex-1 px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm"
+                        value={inputKeys.hf_token}
+                        onChange={e => setInputKeys(p => ({...p, hf_token: e.target.value}))}
+                    />
+                    <button onClick={() => saveKey('hf_token', inputKeys.hf_token)} className="px-3 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm">Save</button>
+                    {keyStatuses.hf_token && <button onClick={() => deleteKey('hf_token')} className="px-3 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg text-sm">Clear</button>}
+                </div>
+                <p className="text-xs text-white/40">Required for downloading Llama 4 and Wan 2.1 models.</p>
+              </div>
+
+               {/* Fal.ai */}
+               <div className="space-y-2">
+                <div className="flex justify-between">
+                    <label className="text-sm font-medium text-white/80">Fal.ai Key</label>
+                    <span className={`text-xs px-2 py-0.5 rounded ${keyStatuses.fal_key ? 'bg-emerald-500/20 text-emerald-400' : 'bg-white/5 text-white/40'}`}>
+                        {keyStatuses.fal_key ? 'INSTALLED' : 'OPTIONAL'}
+                    </span>
+                </div>
+                <div className="flex gap-2">
+                    <input 
+                        type="password" 
+                        placeholder="key_..." 
+                        className="flex-1 px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm"
+                        value={inputKeys.fal_key}
+                        onChange={e => setInputKeys(p => ({...p, fal_key: e.target.value}))}
+                    />
+                    <button onClick={() => saveKey('fal_key', inputKeys.fal_key)} className="px-3 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm">Save</button>
+                     {keyStatuses.fal_key && <button onClick={() => deleteKey('fal_key')} className="px-3 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg text-sm">Clear</button>}
+                </div>
+                <p className="text-xs text-white/40">Required for Cloud Generation (Flux Pro, Kling).</p>
               </div>
             </div>
           )}

@@ -1,7 +1,8 @@
 //! Installer Module - UV, Python, ComfyUI, Hardware Detection, and Model Downloads
 
-mod downloader;
-mod hardware;
+pub mod downloader;
+pub mod gpu_detector;
+pub mod hardware;
 
 pub use downloader::*;
 pub use hardware::*;
@@ -269,27 +270,32 @@ pub async fn install_custom_nodes() -> Result<(), String> {
     let custom_nodes_target = comfyui_dir.join("custom_nodes").join("CinemaOS");
 
     // Create target directory
+    if custom_nodes_target.exists() {
+        std::fs::remove_dir_all(&custom_nodes_target).map_err(|e| e.to_string())?;
+    }
     std::fs::create_dir_all(&custom_nodes_target)
         .map_err(|e| format!("Failed to create custom_nodes dir: {}", e))?;
 
     // Source is relative to the executable (bundled with app)
-    // In production, these would be embedded or in a known location
     let source_dir = std::env::current_exe()
         .ok()
         .and_then(|p| p.parent().map(|p| p.to_path_buf()))
         .unwrap_or_else(|| PathBuf::from("."))
-        .join("comfyui_nodes");
+        .join("comfyui_nodes")
+        .join("cinemaos"); // NEW: Point to the package folder
 
     // If source exists, copy files
     if source_dir.exists() {
         for entry in std::fs::read_dir(&source_dir).map_err(|e| e.to_string())? {
             let entry = entry.map_err(|e| e.to_string())?;
             let path = entry.path();
-            if path.extension().map(|e| e == "py").unwrap_or(false) {
-                let filename = path.file_name().unwrap();
-                let dest = custom_nodes_target.join(filename);
+            // Copy everything (__init__.py, nodes.py, etc.)
+            let filename = path.file_name().unwrap();
+            let dest = custom_nodes_target.join(filename);
+            if path.is_file() {
                 std::fs::copy(&path, &dest).map_err(|e| e.to_string())?;
             }
+            // Note: If we add subfolders later, we need recursive copy here.
         }
     }
 

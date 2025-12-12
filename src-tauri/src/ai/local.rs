@@ -59,8 +59,7 @@ pub fn detect_hardware() -> HardwareCapabilities {
         .map(|m| (m.total / 1024 / 1024) as u32)
         .unwrap_or(8);
 
-    // GPU detection is platform-specific
-    // TODO: Use WGPU adapter info for proper detection
+    // GPU detection using gpu_detector module (WGPU-based)
     let (gpu_name, vram_gb) = detect_gpu_info();
 
     HardwareCapabilities {
@@ -76,23 +75,11 @@ pub fn detect_hardware() -> HardwareCapabilities {
     }
 }
 
-/// Detect GPU info (simplified)
+/// Detect GPU info using gpu_detector module
 fn detect_gpu_info() -> (Option<String>, u32) {
-    // This is a placeholder - in production, use WGPU or native APIs
-    // to properly detect GPU and VRAM
-
-    #[cfg(target_os = "windows")]
-    {
-        // On Windows, we could use DXGI or WMI
-        // For now, return None and let the user configure
-        eprintln!("⚠️ WARNING: GPU Detection is mocked on Windows. Real hardware capabilities not detected.");
-        (None, 0)
-    }
-
-    #[cfg(not(target_os = "windows"))]
-    {
-        (None, 0)
-    }
+    use crate::installer::gpu_detector;
+    let (name, _vendor, vram) = gpu_detector::detect_gpu();
+    (name, vram)
 }
 
 /// Get the local provider for a model ID

@@ -188,14 +188,14 @@ pub trait Agent: Send + Sync {
     fn system_prompt(&self) -> &str;
 
     /// Get the default model for this agent
-    fn default_model(&self) -> &str;
+    fn default_model(&self) -> String;
 
     /// Process an input and return a response
     /// This is async because it may call LLMs
     fn process(&self, input: AgentInput) -> impl std::future::Future<Output = AgentOutput> + Send;
 
     /// Get suggested models for this agent's tasks
-    fn recommended_models(&self) -> Vec<&str> {
+    fn recommended_models(&self) -> Vec<String> {
         vec![self.default_model()]
     }
 }

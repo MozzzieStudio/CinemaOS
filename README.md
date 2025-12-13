@@ -79,17 +79,20 @@ CinemaOS uses a **local-first, cloud-burst** architecture:
                     └─────────────┘
 ```
 
-### Tech Stack
+### Tech Stack Reference (Technical Bible v3.4.0)
 
-| Layer             | Technologies                                |
-| ----------------- | ------------------------------------------- |
-| **Desktop Shell** | Tauri v2 (Rust + WebView)                   |
-| **Frontend**      | React 19, TailwindCSS v4, PixiJS 8 (WebGPU) |
-| **Editor**        | Lexical (Meta)                              |
-| **Backend**       | Rust, SurrealDB 2.1, Loro 1.0 (CRDTs)       |
-| **AI Local**      | Llama Stack, ComfyUI (headless)             |
-| **AI Cloud**      | Vertex AI, Fal.ai, OpenAI, Anthropic        |
-| **Deployment**    | Google Cloud Run (serverless)               |
+Key decisions from the [Technical Bible](technical_bible.md):
+
+| Part     | Stack Component  | Technologies                                      |
+| :------- | :--------------- | :------------------------------------------------ |
+| **I**    | **Rust Core**    | Tauri v2, Tokio, Tonic (gRPC), Reqwest, Serde     |
+| **II**   | **Frontend**     | React 19, Tailwind v4, Lexical, Zod               |
+| **III**  | **Data & State** | SurrealDB (Vector/Graph), Loro (CRDTs), Zustand   |
+| **IV**   | **Graphics**     | WGPU, Wasmtime, FFmpeg, Bevy, PixiJS v8           |
+| **V**    | **Audio**        | Kira, CLAP, OpenTimelineIO, OpenColorIO           |
+| **VI**   | **Cloud infra**  | Google Cloud Run, GKE Autopilot, Apigee           |
+| **VII**  | **AI Services**  | Vertex AI (Gemini 2.0/Gemma), GPU Fleet (L4/A100) |
+| **VIII** | **External AI**  | fal.ai (Media Gen), ComfyUI (Workflows)           |
 
 ---
 

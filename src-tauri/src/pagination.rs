@@ -13,21 +13,21 @@ const PARENTHETICAL_WIDTH: usize = 20; // 2.0" width strict
 const CHARACTER_WIDTH: usize = 38;
 const TRANSITION_WIDTH: usize = 15; // Right aligned usually, but width constraint applies
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, specta::Type)]
 pub struct ScriptElement {
     pub r#type: String, // "action", "dialogue", "parenthetical", etc.
     pub text: String,
     pub scene_number: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, specta::Type)]
 pub struct PageBreak {
     pub line_index: usize, // Index in the list of calculated lines where the break occurs
     pub page_number: usize,
     pub scene_split: bool, // If a scene was split across pages
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, specta::Type)]
 pub struct PaginationResult {
     pub pages: Vec<PageBreak>,
     pub total_pages: usize,

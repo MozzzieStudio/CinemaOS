@@ -7,6 +7,7 @@ use tauri::AppHandle;
 
 /// Open a file using native dialog
 #[tauri::command]
+#[specta::specta]
 pub async fn open_file_dialog(app: AppHandle) -> Result<Option<(String, String)>, String> {
     use tauri_plugin_dialog::DialogExt;
 
@@ -30,6 +31,7 @@ pub async fn open_file_dialog(app: AppHandle) -> Result<Option<(String, String)>
 
 /// Save content to a file using native dialog
 #[tauri::command]
+#[specta::specta]
 pub async fn save_file_dialog(
     app: AppHandle,
     content: String,
@@ -62,12 +64,14 @@ pub async fn save_file_dialog(
 
 /// Save content to a specific path (for Ctrl+S when path is known)
 #[tauri::command]
+#[specta::specta]
 pub async fn save_file_to_path(path: String, content: String) -> Result<(), String> {
     fs::write(&path, &content).map_err(|e| format!("Failed to write file: {}", e))
 }
 
 /// Export PDF using native save dialog
 #[tauri::command]
+#[specta::specta]
 pub async fn export_pdf_dialog(
     app: AppHandle,
     pdf_bytes: Vec<u8>,

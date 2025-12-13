@@ -348,18 +348,20 @@ impl ActionExecutor {
             width,
             height,
             steps: None,
-            cfg_scale: None,
             seed: None,
             input_image: None,
-            token_context: if token_ids.is_empty() {
-                None
-            } else {
-                Some(token_ids.join(","))
-            },
             force_local: Some(false),
         };
 
-        let workflow = generate_workflow(&request);
+        let workflow = match generate_workflow(&request) {
+            Ok(w) => w,
+            Err(e) => {
+                return ActionResult::error(
+                    "generate_image",
+                    &format!("Workflow Generation Failed: {}", e),
+                )
+            }
+        };
 
         // If local workflow, execute via ComfyUI
         if workflow.is_local {
@@ -382,7 +384,7 @@ impl ActionExecutor {
             match client.queue_prompt(workflow_json).await {
                 Ok(response) => ActionResult::success("generate_image")
                     .with_execution_id(response.prompt_id.clone())
-                    .with_credits(workflow.estimated_credits)
+                    .with_credits(workflow.estimated_cost as f32)
                     .with_data(serde_json::json!({
                         "is_local": true,
                         "workflow": workflow.workflow_json,
@@ -399,7 +401,7 @@ impl ActionExecutor {
             // Cloud workflow (Fal.ai / etc) - Logic pending Phase A5
             ActionResult::success("generate_image")
                 .with_execution_id(uuid::Uuid::new_v4().to_string())
-                .with_credits(workflow.estimated_credits)
+                .with_credits(workflow.estimated_cost as f32)
                 .with_data(serde_json::json!({
                     "is_local": false,
                     "workflow": workflow.workflow_json,
@@ -429,18 +431,20 @@ impl ActionExecutor {
             width: 1280,
             height: 720,
             steps: None,
-            cfg_scale: None,
             seed: None,
             input_image: reference_image,
-            token_context: if token_ids.is_empty() {
-                None
-            } else {
-                Some(token_ids.join(","))
-            },
             force_local: Some(false),
         };
 
-        let workflow = generate_workflow(&request);
+        let workflow = match generate_workflow(&request) {
+            Ok(w) => w,
+            Err(e) => {
+                return ActionResult::error(
+                    "generate_video",
+                    &format!("Workflow Generation Failed: {}", e),
+                )
+            }
+        };
 
         // If local workflow, execute via ComfyUI
         if workflow.is_local {
@@ -462,7 +466,7 @@ impl ActionExecutor {
             match client.queue_prompt(workflow_json).await {
                 Ok(response) => ActionResult::success("generate_video")
                     .with_execution_id(response.prompt_id.clone())
-                    .with_credits(workflow.estimated_credits)
+                    .with_credits(workflow.estimated_cost as f32)
                     .with_data(serde_json::json!({
                         "is_local": true,
                         "workflow": workflow.workflow_json,
@@ -479,7 +483,7 @@ impl ActionExecutor {
             // Cloud workflow
             ActionResult::success("generate_video")
                 .with_execution_id(uuid::Uuid::new_v4().to_string())
-                .with_credits(workflow.estimated_credits)
+                .with_credits(workflow.estimated_cost as f32)
                 .with_data(serde_json::json!({
                     "is_local": false,
                     "workflow": workflow.workflow_json,

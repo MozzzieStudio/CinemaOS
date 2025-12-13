@@ -22,13 +22,16 @@ tauri-build = { version = "2", features = [] }
 tauri = { version = "2.9", features = [] }
 tauri-plugin-opener = "2"
 tauri-plugin-dialog = "2"
+tauri-plugin-fs = "2"
+tauri-plugin-shell = "2"
+tauri-plugin-http = "2"
 
 # === SERIALIZATION ===
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 
-# === DATABASE (SurrealDB - Graph + Vector support) ===
-surrealdb = { version = "2.1.4", features = ["kv-mem", "kv-surrealkv"] }
+# === DATABASE (SurrealDB 2.4.0 - Graph + Vector support) ===
+surrealdb = { version = "2.4.0", features = ["kv-mem", "kv-surrealkv", "kv-rocksdb"] }
 
 # === ASYNC RUNTIME ===
 tokio = { version = "1", features = ["full"] }
@@ -36,6 +39,7 @@ tokio = { version = "1", features = ["full"] }
 # === ERROR HANDLING ===
 anyhow = "1.0.100"
 thiserror = "2.0"
+bytes = "1"
 
 # === UTILITIES ===
 once_cell = "1.21.3"
@@ -49,19 +53,20 @@ url = "2.5"
 dirs = "5"
 dotenvy = "0.15"
 
-# === CRDT (Loro - Real-time collaboration) ===
-loro = "1.0.3"
+# === CRDT (Loro 1.9.0 - Real-time collaboration) ===
+loro = "1.9.0"
 
 # === HTTP CLIENT ===
 reqwest = { version = "0.12", features = ["json", "rustls-tls", "stream"] }
 
-# === gRPC (Tonic - bi-directional streaming) ===
-tonic = { version = "0.12", features = ["tls", "gzip"] }
+# === gRPC (Tonic 0.14.2 - bi-directional streaming) ===
+tonic = { version = "0.14", features = ["tls-ring", "gzip"] }
 prost = "0.13"
 
 # === TYPE GENERATION ===
-specta = "2.0.0-rc.21"
-tauri-specta = { version = "2.0.0-rc.21", features = ["derive", "typescript"] }
+specta = { version = "2.0.0-rc.4", features = ["derive"] }
+
+tauri-specta = { version = "2.0.0-rc.4", features = ["derive", "typescript"] }
 
 # === OBSERVABILITY ===
 tracing = "0.1"
@@ -77,8 +82,8 @@ wasmtime = { version = "27", features = ["cranelift", "component-model"] }
 # === SYSTEM INFO ===
 sys-info = "0.9"
 
-# === GRAPHICS ===
-wgpu = { version = "23.0", features = [] }
+# === GRAPHICS (WGPU 27.0 - MSRV 1.88) ===
+wgpu = { version = "27.0", features = [] }
 
 # === WEBSOCKET (ComfyUI Bridge) ===
 tokio-tungstenite = { version = "0.26", features = ["native-tls"] }
@@ -86,6 +91,7 @@ futures-util = "0.3"
 
 # === WEB SERVER (Vault API) ===
 axum = "0.7"
+sha2 = "0.10.9"
 
 
 # Release profile optimizations

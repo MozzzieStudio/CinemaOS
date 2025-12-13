@@ -79,6 +79,8 @@ impl CameraDirector {
                 LLMProvider::OpenAI => "gpt-4o".to_string(),
                 LLMProvider::Anthropic => "claude-sonnet-4-5".to_string(),
                 LLMProvider::Ollama => "llama3.1:8b".to_string(),
+                LLMProvider::LlamaStack => "llama3.2-3b".to_string(),
+                LLMProvider::VertexAI => "gemini-1.5-pro-001".to_string(),
             })
     }
 }
@@ -187,9 +189,11 @@ impl Agent for CameraDirector {
     async fn estimate_cost(&self, _message: &str) -> f32 {
         match self.llm_provider {
             LLMProvider::Ollama => 0.0,
+            LLMProvider::LlamaStack => 0.0,
             LLMProvider::Gemini => 0.005,   // Gemini 3 Pro
             LLMProvider::OpenAI => 0.015,   // GPT-4o
             LLMProvider::Anthropic => 0.02, // Claude
+            LLMProvider::VertexAI => 0.005, // Vertex AI
         }
     }
 }

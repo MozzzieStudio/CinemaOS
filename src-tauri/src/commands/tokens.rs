@@ -21,6 +21,7 @@ async fn get_db() -> Result<Surreal<Any>, String> {
 
 /// Create a new token in the Vault
 #[tauri::command]
+#[specta::specta]
 pub async fn create_token(
     project_id: String,
     token_type: TokenType,
@@ -42,6 +43,7 @@ pub async fn create_token(
 
 /// Get all tokens for a project
 #[tauri::command]
+#[specta::specta]
 pub async fn get_tokens(project_id: String) -> Result<Vec<Token>, String> {
     let db = get_db().await?;
 
@@ -57,6 +59,7 @@ pub async fn get_tokens(project_id: String) -> Result<Vec<Token>, String> {
 
 /// Get tokens by type
 #[tauri::command]
+#[specta::specta]
 pub async fn get_tokens_by_type(
     project_id: String,
     token_type: TokenType,
@@ -78,6 +81,7 @@ pub async fn get_tokens_by_type(
 
 /// Update a token
 #[tauri::command]
+#[specta::specta]
 pub async fn update_token(token: Token) -> Result<Token, String> {
     let db = get_db().await?;
 
@@ -99,6 +103,7 @@ pub async fn update_token(token: Token) -> Result<Token, String> {
 
 /// Delete a token
 #[tauri::command]
+#[specta::specta]
 pub async fn delete_token(token_id: String) -> Result<(), String> {
     let db = get_db().await?;
 
@@ -112,6 +117,7 @@ pub async fn delete_token(token_id: String) -> Result<(), String> {
 
 /// Add a visual reference to a token
 #[tauri::command]
+#[specta::specta]
 pub async fn add_token_visual(token_id: String, visual_url: String) -> Result<Token, String> {
     let db = get_db().await?;
 
@@ -129,6 +135,7 @@ pub async fn add_token_visual(token_id: String, visual_url: String) -> Result<To
 
 /// Set LoRA ID for a token (for generation consistency)
 #[tauri::command]
+#[specta::specta]
 pub async fn set_token_lora(token_id: String, lora_id: String) -> Result<Token, String> {
     let db = get_db().await?;
 
@@ -146,6 +153,7 @@ pub async fn set_token_lora(token_id: String, lora_id: String) -> Result<Token, 
 
 /// Get token context for prompt enhancement in Studio
 #[tauri::command]
+#[specta::specta]
 pub async fn get_token_contexts(token_ids: Vec<String>) -> Result<Vec<TokenContext>, String> {
     let db = get_db().await?;
 
@@ -168,6 +176,7 @@ pub async fn get_token_contexts(token_ids: Vec<String>) -> Result<Vec<TokenConte
 
 /// Extract tokens from script using AI (placeholder - needs ComfyUI integration)
 #[tauri::command]
+#[specta::specta]
 pub async fn extract_tokens_from_script(
     _project_id: String,
     script_content: String,
@@ -300,6 +309,7 @@ pub async fn extract_tokens_from_script(
 
 /// Save extracted tokens to Vault (user confirms first)
 #[tauri::command]
+#[specta::specta]
 pub async fn save_extracted_tokens(
     project_id: String,
     extracted: ExtractedTokens,

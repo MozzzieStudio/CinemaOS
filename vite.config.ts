@@ -45,12 +45,6 @@ export default defineConfig({
         manualChunks: {
           // Vendor chunks
           "react-vendor": ["react", "react-dom"],
-          "lexical-core": ["lexical", "@lexical/react"],
-          "lexical-plugins": [
-            "@lexical/rich-text",
-            "@lexical/list",
-            "@lexical/link",
-          ],
           "pixi": ["pixi.js"],
           "pdf": ["pdfjs-dist"],
           "ui-libs": ["lucide-react", "@radix-ui/react-dialog"],

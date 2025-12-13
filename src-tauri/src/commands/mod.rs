@@ -28,6 +28,7 @@ async fn get_db() -> Result<Surreal<Any>, String> {
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn create_project(title: String, author: String) -> Result<Project, String> {
     let db = get_db().await?;
 
@@ -47,6 +48,7 @@ pub async fn create_project(title: String, author: String) -> Result<Project, St
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn get_projects() -> Result<Vec<Project>, String> {
     let db = get_db().await?;
     let projects: Vec<Project> = db.select("project").await.map_err(|e| e.to_string())?;
@@ -54,6 +56,7 @@ pub async fn get_projects() -> Result<Vec<Project>, String> {
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn save_script(script: Script) -> Result<Script, String> {
     let db = get_db().await?;
 
@@ -78,6 +81,7 @@ pub async fn save_script(script: Script) -> Result<Script, String> {
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn load_script(project_id: String) -> Result<Option<Script>, String> {
     let db = get_db().await?;
 
@@ -93,6 +97,7 @@ pub async fn load_script(project_id: String) -> Result<Option<Script>, String> {
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn get_characters(project_id: String) -> Result<Vec<Character>, String> {
     let db = get_db().await?;
 
@@ -108,6 +113,7 @@ pub async fn get_characters(project_id: String) -> Result<Vec<Character>, String
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn chat_with_agent(
     agent_name: String,
     message: String,

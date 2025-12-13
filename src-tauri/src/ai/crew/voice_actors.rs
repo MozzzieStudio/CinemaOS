@@ -80,6 +80,8 @@ impl VoiceActors {
                 LLMProvider::OpenAI => "gpt-4o".to_string(),
                 LLMProvider::Anthropic => "claude-sonnet-4-5".to_string(),
                 LLMProvider::Ollama => "llama3.1:8b".to_string(),
+                LLMProvider::LlamaStack => "llama3.2-3b".to_string(),
+                LLMProvider::VertexAI => "gemini-1.5-pro-001".to_string(),
             })
     }
 }
@@ -172,7 +174,7 @@ impl Agent for VoiceActors {
                     completion: u.completion_tokens,
                     total: u.total_tokens,
                 }),
-                location: if matches!(self.llm_provider, LLMProvider::Ollama) {
+                location: if matches!(self.llm_provider, LLMProvider::Ollama | LLMProvider::LlamaStack) {
                     ProcessingLocation::Local
                 } else {
                     ProcessingLocation::Cloud
@@ -184,9 +186,11 @@ impl Agent for VoiceActors {
     async fn estimate_cost(&self, _message: &str) -> f32 {
         match self.llm_provider {
             LLMProvider::Ollama => 0.0,
+            LLMProvider::LlamaStack => 0.0,
             LLMProvider::Gemini => 0.001, // Gemini 2.5 Flash very cheap
             LLMProvider::OpenAI => 0.01,
             LLMProvider::Anthropic => 0.015,
+            LLMProvider::VertexAI => 0.005,
         }
     }
 }

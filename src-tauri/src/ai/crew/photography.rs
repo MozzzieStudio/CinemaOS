@@ -143,10 +143,18 @@ impl Agent for PhotographyDirector {
                 .llm_model
                 .clone()
                 .unwrap_or_else(|| "llama3.1:8b".to_string()),
+            LLMProvider::LlamaStack => self
+                .llm_model
+                .clone()
+                .unwrap_or_else(|| "llama3.2-3b".to_string()),
+            LLMProvider::VertexAI => self
+                .llm_model
+                .clone()
+                .unwrap_or_else(|| "gemini-1.5-pro-001".to_string()),
         };
 
         let location = match self.llm_provider {
-            LLMProvider::Ollama => ProcessingLocation::Local,
+            LLMProvider::Ollama | LLMProvider::LlamaStack => ProcessingLocation::Local,
             _ => ProcessingLocation::Cloud,
         };
 
@@ -167,10 +175,12 @@ impl Agent for PhotographyDirector {
     async fn estimate_cost(&self, _message: &str) -> f32 {
         // LLM call + potential image generation
         match self.llm_provider {
-            LLMProvider::Ollama => 0.0,      // Local is free
-            LLMProvider::Gemini => 0.001,    // Gemini Flash is very cheap
-            LLMProvider::OpenAI => 0.01,     // GPT-4o
+            LLMProvider::Ollama => 0.0, // Local is free
+            LLMProvider::LlamaStack => 0.0,
+            LLMProvider::Gemini => 0.001, // Gemini Flash is very cheap
+            LLMProvider::OpenAI => 0.01,  // GPT-4o
             LLMProvider::Anthropic => 0.015, // Claude
+            LLMProvider::VertexAI => 0.005, // Vertex AI
         }
     }
 }

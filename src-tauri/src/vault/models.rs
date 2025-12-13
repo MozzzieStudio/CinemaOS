@@ -1,8 +1,9 @@
 use serde::{Deserialize, Serialize};
 use surrealdb::sql::Thing;
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, specta::Type)]
 pub struct Project {
+    #[specta(type = String)]
     pub id: Option<Thing>,
     pub title: String,
     pub created_at: String,
@@ -10,18 +11,22 @@ pub struct Project {
     pub author: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, specta::Type)]
 pub struct Script {
+    #[specta(type = String)]
     pub id: Option<Thing>,
+    #[specta(type = String)]
     pub project_id: Thing,
     pub title: String,
     pub content: String, // Lexical JSON string
     pub version: u32,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, specta::Type)]
 pub struct Scene {
+    #[specta(type = String)]
     pub id: Option<Thing>,
+    #[specta(type = String)]
     pub script_id: Thing,
     pub number: u32,
     pub slugline: String,
@@ -29,9 +34,11 @@ pub struct Scene {
     pub tokens: Vec<String>, // List of Token IDs (e.g., character:anna)
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, specta::Type)]
 pub struct Character {
+    #[specta(type = String)]
     pub id: Option<Thing>,
+    #[specta(type = String)]
     pub project_id: Thing,
     pub name: String,
     pub description: String,
@@ -39,9 +46,11 @@ pub struct Character {
     pub lora_path: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, specta::Type)]
 pub struct Location {
+    #[specta(type = String)]
     pub id: Option<Thing>,
+    #[specta(type = String)]
     pub project_id: Thing,
     pub name: String,
     pub description: String,

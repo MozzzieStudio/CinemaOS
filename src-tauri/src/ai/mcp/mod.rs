@@ -3,6 +3,7 @@
 //! Standardized protocol for agent-to-tool communication
 
 pub mod client;
+pub mod protocol;
 pub mod server;
 
 use serde::{Deserialize, Serialize};

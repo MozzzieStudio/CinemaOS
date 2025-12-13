@@ -17,6 +17,7 @@ impl ModelSelection {
             "openai" => LLMProvider::OpenAI,
             "anthropic" => LLMProvider::Anthropic,
             "ollama" => LLMProvider::Ollama,
+            "llamastack" => LLMProvider::LlamaStack,
             _ => LLMProvider::Gemini, // Default
         }
     }

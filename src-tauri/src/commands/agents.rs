@@ -174,6 +174,7 @@ mod tests {
                 vault: None,
                 mode: "writer".into(),
                 project_name: Some("Test".into()),
+                preferences: None,
             }),
             history: vec![],
             provider: None,

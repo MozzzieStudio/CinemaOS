@@ -176,7 +176,7 @@ impl AgentExecutor {
         let default_model = self
             .crew
             .get(*role)
-            .map(|m| m.default_model().to_string())
+            .map(|m| m.default_model())
             .unwrap_or_else(|| "gemini-2.0-flash".to_string());
 
         // Determine provider from model name
@@ -201,15 +201,17 @@ impl AgentExecutor {
 
         // Photography Director → Image generation
         if matches!(role, AgentRole::PhotographyDirector)
-            && (lower.contains("generating") || lower.contains("creating image")) {
-                return Some(self.create_image_action(response));
-            }
+            && (lower.contains("generating") || lower.contains("creating image"))
+        {
+            return Some(self.create_image_action(response));
+        }
 
         // Camera Director → Video generation
         if matches!(role, AgentRole::CameraDirector)
-            && (lower.contains("generating") || lower.contains("creating video")) {
-                return Some(self.create_video_action(response));
-            }
+            && (lower.contains("generating") || lower.contains("creating video"))
+        {
+            return Some(self.create_video_action(response));
+        }
 
         // Check for JSON workflow in response
         if response.contains("\"class_type\"") {
@@ -232,24 +234,33 @@ impl AgentExecutor {
             workflow_type: WorkflowType::TextToImage,
             prompt,
             negative_prompt: None,
-            model: "flux-schnell".into(),
+            model: crate::ai::models::get_models_by_capability(
+                crate::ai::models::ModelCapability::TextToImage,
+            )
+            .first()
+            .map(|m| m.id.clone())
+            .unwrap_or("flux-schnell".into()),
             width: 1024,
             height: 1024,
             steps: None,
-            cfg_scale: None,
             seed: None,
             input_image: None,
-            token_context: None,
             force_local: None,
         };
 
-        let workflow = generate_workflow(&request);
-
-        AgentActionResult {
-            action_type: "generate_image".into(),
-            workflow_json: Some(workflow.workflow_json),
-            execution_id: None,
-            estimated_credits: Some(workflow.estimated_credits),
+        match generate_workflow(&request) {
+            Ok(workflow) => AgentActionResult {
+                action_type: "generate_image".into(),
+                workflow_json: Some(workflow.workflow_json),
+                execution_id: None,
+                estimated_credits: Some(workflow.estimated_cost as f32),
+            },
+            Err(e) => AgentActionResult {
+                action_type: "error".into(),
+                workflow_json: None,
+                execution_id: None,
+                estimated_credits: None,
+            },
         }
     }
 
@@ -260,24 +271,33 @@ impl AgentExecutor {
             workflow_type: WorkflowType::TextToVideo,
             prompt,
             negative_prompt: None,
-            model: "kling".into(),
+            model: crate::ai::models::get_models_by_capability(
+                crate::ai::models::ModelCapability::TextToVideo,
+            )
+            .first()
+            .map(|m| m.id.clone())
+            .unwrap_or("kling-v2.6".into()),
             width: 1280,
             height: 720,
             steps: None,
-            cfg_scale: None,
             seed: None,
             input_image: None,
-            token_context: None,
             force_local: None,
         };
 
-        let workflow = generate_workflow(&request);
-
-        AgentActionResult {
-            action_type: "generate_video".into(),
-            workflow_json: Some(workflow.workflow_json),
-            execution_id: None,
-            estimated_credits: Some(workflow.estimated_credits),
+        match generate_workflow(&request) {
+            Ok(workflow) => AgentActionResult {
+                action_type: "generate_video".into(),
+                workflow_json: Some(workflow.workflow_json),
+                execution_id: None,
+                estimated_credits: Some(workflow.estimated_cost as f32),
+            },
+            Err(e) => AgentActionResult {
+                action_type: "error".into(),
+                workflow_json: None,
+                execution_id: None,
+                estimated_credits: None,
+            },
         }
     }
 }

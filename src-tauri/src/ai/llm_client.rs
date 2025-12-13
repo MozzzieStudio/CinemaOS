@@ -16,7 +16,9 @@ pub enum LLMProvider {
     Gemini,
     OpenAI,
     Anthropic,
-    Ollama, // Local
+    Ollama,     // Local
+    LlamaStack, // Local (Meta Standard)
+    VertexAI,   // GCP Enterprise
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
@@ -72,7 +74,89 @@ impl LLMClient {
             LLMProvider::OpenAI => self.chat_openai(request).await,
             LLMProvider::Anthropic => self.chat_anthropic(request).await,
             LLMProvider::Ollama => self.chat_ollama(request).await,
+            LLMProvider::LlamaStack => self.chat_llama_stack(request).await,
+            LLMProvider::VertexAI => self.chat_vertex_ai(request).await,
         }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // LLAMA STACK (Local)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    async fn chat_llama_stack(&self, request: LLMRequest) -> Result<LLMResponse, String> {
+        let base_url =
+            env::var("LLAMA_STACK_PORT").unwrap_or_else(|_| "http://localhost:5000".to_string());
+
+        let model = if request.model.is_empty() {
+            "llama3.2-3b"
+        } else {
+            &request.model
+        };
+
+        let mut messages: Vec<serde_json::Value> = Vec::new();
+
+        if let Some(system) = &request.system_prompt {
+            messages.push(serde_json::json!({
+                "role": "system",
+                "content": system
+            }));
+        }
+
+        for m in &request.messages {
+            messages.push(serde_json::json!({
+                "role": m.role,
+                "content": m.content
+            }));
+        }
+
+        let body = serde_json::json!({
+            "model": model,
+            "messages": messages,
+            "temperature": request.temperature.unwrap_or(0.7),
+            "max_tokens": request.max_tokens.unwrap_or(4096),
+            "stream": false
+        });
+
+        // Llama Stack usually exposes OpenAI-compatible /v1/chat/completions
+        let url = format!("{}/v1/chat/completions", base_url);
+
+        let response = self
+            .http
+            .post(&url)
+            .json(&body)
+            .send()
+            .await
+            .map_err(|e| format!("Llama Stack request failed: {}", e))?;
+
+        let status = response.status();
+        let text = response.text().await.map_err(|e| e.to_string())?;
+
+        if !status.is_success() {
+            return Err(format!("Llama Stack error {}: {}", status, text));
+        }
+
+        let json: serde_json::Value =
+            serde_json::from_str(&text).map_err(|e| format!("Parse error: {}", e))?;
+
+        let content = json["choices"][0]["message"]["content"]
+            .as_str()
+            .unwrap_or("")
+            .to_string();
+
+        let usage = json.get("usage").map(|u| TokenUsage {
+            prompt_tokens: u["prompt_tokens"].as_u64().unwrap_or(0) as u32,
+            completion_tokens: u["completion_tokens"].as_u64().unwrap_or(0) as u32,
+            total_tokens: u["total_tokens"].as_u64().unwrap_or(0) as u32,
+        });
+
+        Ok(LLMResponse {
+            content,
+            model: model.to_string(),
+            usage,
+            finish_reason: json["choices"][0]["finish_reason"]
+                .as_str()
+                .map(String::from),
+        })
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -90,6 +174,7 @@ impl LLMClient {
             &request.model
         };
 
+        // Use v1beta for latest features, but consider moving to v1 for production stability
         let url = format!(
             "https://generativelanguage.googleapis.com/v1beta/models/{}:generateContent?key={}",
             model, api_key
@@ -377,6 +462,93 @@ impl LLMClient {
             model: model.to_string(),
             usage: None,
             finish_reason: Some("stop".to_string()),
+        })
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // VERTEX AI (GCP)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    async fn chat_vertex_ai(&self, request: LLMRequest) -> Result<LLMResponse, String> {
+        let access_token = env::var("GCP_ACCESS_TOKEN").map_err(|_| "GCP_ACCESS_TOKEN not set")?;
+        let project_id = env::var("GCP_PROJECT_ID").map_err(|_| "GCP_PROJECT_ID not set")?;
+        let region = env::var("GCP_REGION").unwrap_or_else(|_| "us-central1".to_string());
+
+        let model = if request.model.is_empty() {
+            "gemini-1.5-pro-001"
+        } else {
+            &request.model
+        };
+
+        let url = format!(
+            "https://{}-aiplatform.googleapis.com/v1/projects/{}/locations/{}/publishers/google/models/{}:generateContent",
+            region, project_id, region, model
+        );
+
+        // Vertex AI mimics Gemini format but auth is different
+        let contents: Vec<serde_json::Value> = request
+            .messages
+            .iter()
+            .map(|m| {
+                serde_json::json!({
+                    "role": if m.role == "assistant" { "model" } else { "user" },
+                    "parts": [{"text": m.content}]
+                })
+            })
+            .collect();
+
+        let mut body = serde_json::json!({
+            "contents": contents
+        });
+
+        if let Some(system) = &request.system_prompt {
+            body["systemInstruction"] = serde_json::json!({
+                "parts": [{"text": system}]
+            });
+        }
+
+        body["generationConfig"] = serde_json::json!({
+            "temperature": request.temperature.unwrap_or(0.7),
+            "maxOutputTokens": request.max_tokens.unwrap_or(8192)
+        });
+
+        let response = self
+            .http
+            .post(&url)
+            .header("Authorization", format!("Bearer {}", access_token))
+            .json(&body)
+            .send()
+            .await
+            .map_err(|e| format!("Vertex AI request failed: {}", e))?;
+
+        let status = response.status();
+        let text = response.text().await.map_err(|e| e.to_string())?;
+
+        if !status.is_success() {
+            return Err(format!("Vertex AI error {}: {}", status, text));
+        }
+
+        let json: serde_json::Value =
+            serde_json::from_str(&text).map_err(|e| format!("Parse error: {}", e))?;
+
+        let content = json["candidates"][0]["content"]["parts"][0]["text"]
+            .as_str()
+            .unwrap_or("")
+            .to_string();
+
+        let usage = json.get("usageMetadata").map(|u| TokenUsage {
+            prompt_tokens: u["promptTokenCount"].as_u64().unwrap_or(0) as u32,
+            completion_tokens: u["candidatesTokenCount"].as_u64().unwrap_or(0) as u32,
+            total_tokens: u["totalTokenCount"].as_u64().unwrap_or(0) as u32,
+        });
+
+        Ok(LLMResponse {
+            content,
+            model: model.to_string(),
+            usage,
+            finish_reason: json["candidates"][0]["finishReason"]
+                .as_str()
+                .map(String::from),
         })
     }
 }

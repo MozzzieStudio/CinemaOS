@@ -28,7 +28,7 @@ pub async fn detect_gpu_async() -> Option<GpuInfo> {
     debug!("Starting GPU detection with WGPU");
 
     // Create WGPU instance
-    let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
+    let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
         backends: wgpu::Backends::all(),
         ..Default::default()
     });
@@ -40,7 +40,8 @@ pub async fn detect_gpu_async() -> Option<GpuInfo> {
             compatible_surface: None,
             force_fallback_adapter: false,
         })
-        .await?;
+        .await
+        .ok()?;
 
     let info = adapter.get_info();
     let limits = adapter.limits();

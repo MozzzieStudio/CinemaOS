@@ -5,11 +5,12 @@
 use crate::ai::{
     agents::traits::AgentRole,
     local::{detect_hardware, HardwareCapabilities},
-    models::{get_all_models, get_local_models, ModelDefinition},
-    router::{get_recommended_models, route_model_request, RoutingResult},
+    models::{
+        get_all_models, get_local_models, get_models_by_capability, ModelCapability,
+        ModelDefinition,
+    },
+    router::{route_model_request, RouterDecision},
 };
-
-// VIRTUAL_CREW removed as it was only used by legacy commands
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // MODEL COMMANDS
@@ -28,11 +29,19 @@ pub fn get_models() -> Vec<ModelDefinition> {
 #[specta::specta]
 pub fn get_models_for_task(task_type: String) -> Vec<ModelDefinition> {
     tracing::debug!("Fetching models for task: {}", task_type);
-    let hw = detect_hardware();
-    get_recommended_models(&task_type, &hw)
-        .into_iter()
-        .map(|(m, _)| m)
-        .collect()
+
+    let capability = match task_type.as_str() {
+        "text" | "script" | "dialogue" => ModelCapability::TextGeneration,
+        "image" | "concept_art" => ModelCapability::TextToImage,
+        "video" | "shot" => ModelCapability::TextToVideo,
+        "voice" | "tts" => ModelCapability::TextToSpeech,
+        "transcription" | "stt" => ModelCapability::SpeechToText,
+        "music" | "sfx" => ModelCapability::AudioGeneration,
+        "segment" | "mask" => ModelCapability::Segmentation,
+        _ => ModelCapability::TextGeneration,
+    };
+
+    get_models_by_capability(capability)
 }
 
 /// Get only local (free) models
@@ -54,14 +63,29 @@ pub fn get_hardware_capabilities() -> HardwareCapabilities {
 /// Route a model request (check if local or cloud)
 #[tauri::command]
 #[specta::specta]
-pub fn route_request(model_id: String, prefer_local: bool) -> Result<RoutingResult, String> {
+pub fn route_request(model_id: String, prefer_local: bool) -> Result<RouterDecision, String> {
     tracing::info!(
         "Routing request for model: {}, prefer_local: {}",
         model_id,
         prefer_local
     );
-    let hw = detect_hardware();
-    route_model_request(&model_id, &hw, prefer_local).map_err(|e| e.to_string())
+
+    // In the new router, we route based on Capability + Preference
+    // We first need to find the model capability to route correctly
+    let all = get_all_models();
+    let model = all
+        .iter()
+        .find(|m| m.id == model_id)
+        .ok_or_else(|| format!("Model {} not found", model_id))?;
+
+    // Use the model's primary capability
+    let cap = model
+        .capabilities
+        .first()
+        .cloned()
+        .unwrap_or(ModelCapability::TextGeneration);
+
+    route_model_request(cap, Some(model_id), prefer_local)
 }
 
 /// Get models that can run on current hardware

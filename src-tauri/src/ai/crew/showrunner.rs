@@ -83,6 +83,8 @@ impl Showrunner {
                 LLMProvider::Anthropic => "claude-opus-4-5".to_string(),
                 LLMProvider::OpenAI => "gpt-4o".to_string(),
                 LLMProvider::Ollama => "llama4:maverick".to_string(),
+                LLMProvider::LlamaStack => "llama3.2-3b".to_string(),
+                LLMProvider::VertexAI => "gemini-1.5-pro-001".to_string(),
             })
     }
 }
@@ -145,7 +147,10 @@ impl Agent for Showrunner {
                     completion: u.completion_tokens,
                     total: u.total_tokens,
                 }),
-                location: if matches!(self.llm_provider, LLMProvider::Ollama) {
+                location: if matches!(
+                    self.llm_provider,
+                    LLMProvider::Ollama | LLMProvider::LlamaStack
+                ) {
                     ProcessingLocation::Local
                 } else {
                     ProcessingLocation::Cloud
@@ -157,9 +162,11 @@ impl Agent for Showrunner {
     async fn estimate_cost(&self, _message: &str) -> f32 {
         match self.llm_provider {
             LLMProvider::Ollama => 0.0,
+            LLMProvider::LlamaStack => 0.0,
             LLMProvider::Gemini => 0.008, // Gemini 3 Pro
             LLMProvider::OpenAI => 0.02,
             LLMProvider::Anthropic => 0.03, // Claude Opus 4.5
+            LLMProvider::VertexAI => 0.005, // Vertex AI
         }
     }
 }

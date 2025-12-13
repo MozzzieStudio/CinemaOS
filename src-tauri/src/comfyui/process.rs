@@ -40,8 +40,8 @@ pub async fn start_comfyui(
             "none", // No preview images
         ])
         .current_dir(&install_path)
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
         .spawn()
         .map_err(|e| AppError::ProcessStart(format!("Failed to spawn ComfyUI: {}", e)))?;
 

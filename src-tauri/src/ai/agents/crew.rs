@@ -13,60 +13,63 @@ use std::collections::HashMap;
 // GENERIC CREW MEMBER (Base Implementation)
 // ═══════════════════════════════════════════════════════════════════════════════
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// GENERIC CREW MEMBER (Base Implementation)
+// ═══════════════════════════════════════════════════════════════════════════════
+
 /// A generic crew member that can be instantiated for any role.
 /// Uses the prompts and default models defined in the prompts module.
 pub struct CrewMember {
     role: AgentRole,
-    default_model: String,
 }
 
 impl CrewMember {
     /// Create a new crew member with the specified role
     pub fn new(role: AgentRole) -> Self {
-        let default_model = Self::get_default_model_for_role(role);
-        Self {
-            role,
-            default_model,
-        }
+        Self { role }
     }
 
-    /// Get the default model for each agent role
-    fn get_default_model_for_role(role: AgentRole) -> String {
+    /// Get the primary capability for this agent role
+    fn get_capability_for_role(role: AgentRole) -> crate::ai::models::ModelCapability {
+        use crate::ai::agents::traits::AgentRole::*;
+        use crate::ai::models::ModelCapability::*;
+
         match role {
-            // Text/reasoning agents use Gemini or Claude
-            AgentRole::Showrunner => "gemini-3-pro".into(),
-            AgentRole::Scriptwriter => "claude-sonnet-4.5".into(),
-            AgentRole::Cinematographer => "gemini-2.5-flash".into(),
-            AgentRole::CastingDirector => "gemini-2.5-flash".into(),
-            AgentRole::ArtDirector => "gemini-2.5-flash".into(),
-            AgentRole::Editor => "gemini-2.5-flash".into(),
+            // Text/reasoning agents
+            Showrunner | Scriptwriter | Cinematographer | CastingDirector | ArtDirector
+            | Editor | Colorist => TextGeneration,
 
-            // Generation agents use specialized models
-            AgentRole::PhotographyDirector => "flux.2".into(),
-            AgentRole::CameraDirector => "veo-3.1".into(),
-            AgentRole::VoiceActors => "elevenlabs-v3".into(),
-            AgentRole::MusicSfxDirector => "lyria-2".into(),
-            AgentRole::Colorist => "gemini-2.5-flash".into(),
+            // Generation agents
+            PhotographyDirector => TextToImage,
+            CameraDirector => TextToVideo,
+            VoiceActors => TextToSpeech,
+            MusicSfxDirector => AudioGeneration,
         }
     }
 
-    /// Get alternative models for this role
-    pub fn get_alternative_models(&self) -> Vec<&str> {
-        match self.role {
-            AgentRole::PhotographyDirector => {
-                vec!["flux.2", "imagen-4", "kling-image-o1", "nano-banana-pro"]
-            }
-            AgentRole::CameraDirector => {
-                vec!["veo-3.1", "sora-2-pro", "kling-v2.5-turbo", "wan-2.5"]
-            }
-            AgentRole::VoiceActors => {
-                vec!["elevenlabs-v3", "seed-realtime-voice"]
-            }
-            AgentRole::MusicSfxDirector => {
-                vec!["lyria-2", "suno-v4", "audiocraft", "seed-music"]
-            }
-            _ => vec![&self.default_model],
-        }
+    /// Get the default model for each agent role dynamically
+    fn get_default_model_for_role(role: AgentRole) -> String {
+        use crate::ai::models::get_models_by_capability;
+
+        let cap = Self::get_capability_for_role(role);
+        let models = get_models_by_capability(cap);
+
+        // Return the first recommended model (models.rs sorts them by tier/quality usually)
+        // Or fallback to a safe default if list is empty
+        models
+            .first()
+            .map(|m| m.id.clone())
+            .unwrap_or_else(|| "gemini-2.0-flash".to_string())
+    }
+
+    /// Get alternative models for this role dynamically
+    pub fn get_alternative_models(&self) -> Vec<String> {
+        use crate::ai::models::get_models_by_capability;
+
+        let cap = Self::get_capability_for_role(self.role);
+        let models = get_models_by_capability(cap);
+
+        models.into_iter().map(|m| m.id).collect()
     }
 }
 
@@ -79,8 +82,9 @@ impl Agent for CrewMember {
         get_system_prompt(self.role)
     }
 
-    fn default_model(&self) -> &str {
-        &self.default_model
+    fn default_model(&self) -> String {
+        // Changed to return String to avoid lifetime issues with dynamic lookup
+        Self::get_default_model_for_role(self.role)
     }
 
     async fn process(&self, input: AgentInput) -> AgentOutput {
@@ -105,7 +109,8 @@ impl Agent for CrewMember {
         }
     }
 
-    fn recommended_models(&self) -> Vec<&str> {
+    fn recommended_models(&self) -> Vec<String> {
+        // Changed to return Vec<String>
         self.get_alternative_models()
     }
 }

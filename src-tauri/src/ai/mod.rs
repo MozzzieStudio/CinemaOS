@@ -12,6 +12,7 @@
 //! - Legacy modules preserved for backward compatibility
 
 // NEW: AI Crew framework
+pub mod assets;
 pub mod cost;
 pub mod crew;
 pub mod mcp;
@@ -24,11 +25,15 @@ pub mod agent_executor;
 pub mod agents;
 pub mod comfyui_client;
 pub mod context;
+pub mod elevenlabs_client;
+pub mod fal_client;
+pub mod keygen_client;
 pub mod llm_client;
 pub mod local;
 pub mod models;
 pub mod providers;
 pub mod router;
+pub mod uv_manager;
 pub mod workflow;
 pub mod workflow_generator;
 

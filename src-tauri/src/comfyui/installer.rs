@@ -44,6 +44,9 @@ pub async fn install_comfyui(install_path: PathBuf) -> Result<(), AppError> {
     // Step 5: Use comfy-cli to install ComfyUI
     install_comfyui_via_cli(&install_path).await?;
 
+    // Step 6: Install CinemaOS Custom Nodes
+    install_cinemaos_nodes(&install_path).await?;
+
     Ok(())
 }
 
@@ -129,6 +132,34 @@ async fn install_comfyui_via_cli(path: &PathBuf) -> Result<(), AppError> {
         )));
     }
 
+    Ok(())
+}
+
+/// Install CinemaOS Custom Nodes
+async fn install_cinemaos_nodes(install_path: &PathBuf) -> Result<(), AppError> {
+    let source = crate::utils::get_resource_path("comfyui_nodes")
+        .ok_or_else(|| AppError::Installation("Failed to find comfyui_nodes resource".into()))?;
+
+    let target = install_path.join("custom_nodes").join("cinemaos_nodes");
+
+    // Copy directory recursively
+    copy_dir_all(&source, &target)
+        .map_err(|e| AppError::Installation(format!("Failed to install CinemaOS nodes: {}", e)))?;
+
+    Ok(())
+}
+
+fn copy_dir_all(src: &std::path::Path, dst: &std::path::Path) -> std::io::Result<()> {
+    std::fs::create_dir_all(dst)?;
+    for entry in std::fs::read_dir(src)? {
+        let entry = entry?;
+        let ty = entry.file_type()?;
+        if ty.is_dir() {
+            copy_dir_all(&entry.path(), &dst.join(entry.file_name()))?;
+        } else {
+            std::fs::copy(entry.path(), dst.join(entry.file_name()))?;
+        }
+    }
     Ok(())
 }
 

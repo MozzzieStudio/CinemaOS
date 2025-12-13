@@ -74,13 +74,18 @@ class CinemaOS_KSampler:
             "negative": ("CONDITIONING", ),
             "latent_image": ("LATENT", ),
             "denoise": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01}),
+        },
+        "optional": {
+            "motion_bucket_id": ("INT", {"default": 127, "min": 1, "max": 255}),
         }}
     
     RETURN_TYPES = ("LATENT",)
     FUNCTION = "sample"
     CATEGORY = "CinemaOS/Standard"
 
-    def sample(self, model, seed, steps, cfg, sampler_name, scheduler, positive, negative, latent_image, denoise):
+    def sample(self, model, seed, steps, cfg, sampler_name, scheduler, positive, negative, latent_image, denoise, **kwargs):
+        # We safely ignore extra parameters like motion_bucket_id for now
+        # until we implement specialized video sampling internal logic
         return nodes.KSampler().sample(model, seed, steps, cfg, sampler_name, scheduler, positive, negative, latent_image, denoise)
 
 class CinemaOS_VAEDecode:
@@ -136,4 +141,27 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "CinemaOS_KSampler": "OS KSampler",
     "CinemaOS_VAEDecode": "OS VAE Decode",
     "CinemaOS_SaveImage": "OS Save Image",
+    "CinemaOS_LoadImage": "OS Load Image",
+    "CinemaOS_VAEEncode": "OS VAE Encode",
 }
+
+class CinemaOS_VAEEncode:
+    """
+    CinemaOS Adapter for VAEEncode.
+    """
+    @classmethod
+    def INPUT_TYPES(s):
+        return {"required": {
+            "pixels": ("IMAGE", ), "vae": ("VAE", )
+        }}
+    
+    RETURN_TYPES = ("LATENT",)
+    FUNCTION = "encode"
+    CATEGORY = "CinemaOS/Standard"
+
+    def encode(self, pixels, vae):
+        return nodes.VAEEncode().encode(pixels, vae)
+
+NODE_CLASS_MAPPINGS["CinemaOS_VAEEncode"] = CinemaOS_VAEEncode
+
+

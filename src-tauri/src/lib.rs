@@ -1,17 +1,20 @@
 pub mod ai;
 pub mod comfyui;
 pub mod commands;
+pub mod db;
 pub mod errors;
 pub mod graphics;
 pub mod installer;
 pub mod observability;
 pub mod pagination;
 pub mod sync;
+pub mod utils;
 pub mod vault;
 
 use crate::pagination::{PaginationResult, ScriptElement};
 
 #[tauri::command]
+#[specta::specta]
 fn calculate_pagination(elements: Vec<ScriptElement>) -> PaginationResult {
     pagination::paginate_script(elements)
 }
@@ -22,35 +25,13 @@ mod tests;
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
-        .setup(|_app| {
-            // Initialize the Vault (SurrealDB) in the background
-            tauri::async_runtime::spawn(async {
-                if let Err(e) = vault::init().await {
-                    eprintln!("❌ Failed to initialize Vault: {}", e);
-                }
-            });
-
-            // Initialize the Sync Engine (Loro) in the background
-            tauri::async_runtime::spawn(async {
-                if let Err(e) = sync::init().await {
-                    eprintln!("❌ Failed to initialize Sync Engine: {}", e);
-                }
-            });
-
-            // Initialize Graphics Engine (Bevy)
-            graphics::init();
-
-            Ok(())
-        })
-        .plugin(tauri_plugin_opener::init())
-        .plugin(tauri_plugin_dialog::init())
-        .invoke_handler(tauri::generate_handler![
+    let builder =
+        tauri_specta::Builder::<tauri::Wry>::new().commands(tauri_specta::collect_commands![
             commands::create_project,
             commands::get_projects,
             commands::save_script,
-            commands::load_script,
             commands::load_script,
             commands::get_characters,
             commands::chat_with_agent,
@@ -119,7 +100,39 @@ pub fn run() {
             commands::settings::save_api_key,
             commands::settings::get_api_key_status,
             commands::settings::delete_api_key,
-        ])
+        ]);
+
+    #[cfg(debug_assertions)]
+    // builder
+    //    .export(
+    //        specta_typescript::Typescript::default(),
+    //        "../src/bindings.ts",
+    //    )
+    //    .expect("Failed to export typescript bindings");
+    tauri::Builder::default()
+        .setup(|_app| {
+            // Initialize the Vault (SurrealDB) in the background
+            tauri::async_runtime::spawn(async {
+                if let Err(e) = vault::init().await {
+                    eprintln!("❌ Failed to initialize Vault: {}", e);
+                }
+            });
+
+            // Initialize the Sync Engine (Loro) in the background
+            tauri::async_runtime::spawn(async {
+                if let Err(e) = sync::init().await {
+                    eprintln!("❌ Failed to initialize Sync Engine: {}", e);
+                }
+            });
+
+            // Initialize Graphics Engine (Bevy)
+            graphics::init();
+
+            Ok(())
+        })
+        .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
+        .invoke_handler(builder.invoke_handler())
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
